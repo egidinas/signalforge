@@ -24,6 +24,9 @@ SignalForge should grow from small, audited neutral primitives:
   viewport selection;
 - numeric clamping helpers, starting with [`signalforge/mathutil`](mathutil)
   for ordered values and duration bounds;
+- semantic graph and source-catalogue contracts, starting with
+  [`signalforge/graphsem`](graphsem) for neutral signal vocabularies,
+  catalogue validation, and selection resolution;
 - compact agent/context encoding;
 - source catalogue and discovery-tree contracts;
 - graph/tile query contracts;
