@@ -17,9 +17,13 @@ SignalForge should grow from small, audited neutral primitives:
 - safe file/path helpers, starting with [`signalforge/safepath`](safepath)
   for lexical containment checks; callers that dereference paths through
   untrusted directories still need symlink-aware handling;
+- JSON and JSONL file helpers, starting with [`signalforge/jsonfile`](jsonfile)
+  for pretty-printed JSON writes and append-only line records;
 - graph wall policy helpers, starting with [`signalforge/graphwall`](graphwall)
   for deterministic tile assignment, axis normalization, layout defaults, and
   viewport selection;
+- numeric clamping helpers, starting with [`signalforge/mathutil`](mathutil)
+  for ordered values and duration bounds;
 - compact agent/context encoding;
 - source catalogue and discovery-tree contracts;
 - graph/tile query contracts;
