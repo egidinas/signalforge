@@ -27,6 +27,10 @@ SignalForge should grow from small, audited neutral primitives:
 - semantic graph and source-catalogue contracts, starting with
   [`signalforge/graphsem`](graphsem) for neutral signal vocabularies,
   catalogue validation, and selection resolution;
+- reusable control-program contracts, starting with
+  [`signalforge/controlprogram`](controlprogram) for target fanout, cyclic
+  setpoint programs, hold durations, and validation without binding to a device
+  vendor or fieldbus protocol;
 - compact agent/context encoding;
 - source catalogue and discovery-tree contracts;
 - graph/tile query contracts;
