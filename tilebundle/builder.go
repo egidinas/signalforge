@@ -66,7 +66,7 @@ func WriteBundle(models []contracts.GraphModel, opts Options) (contracts.TileBun
 	rootRange := models[0].GraphWall.TimeRange
 	manifest := contracts.TileBundleManifest{
 		Envelope:             contracts.NewEnvelope(opts.Now),
-		ID:                   "gossamer_tile_bundle_" + opts.DataVersion,
+		ID:                   "signalforge_tile_bundle_" + opts.DataVersion,
 		DataVersion:          opts.DataVersion,
 		UIVersion:            opts.UIVersion,
 		GeneratedAt:          opts.Now.UTC().Format(time.RFC3339),
@@ -75,7 +75,7 @@ func WriteBundle(models []contracts.GraphModel, opts Options) (contracts.TileBun
 		ReplaySpeed:          replaySpeed(models[0]),
 		PresentCursorPolicy:  "observed_until_cursor_planned_after_cursor",
 		Provenance: contracts.TileBundleProvenance{
-			Generator:              "cmd/gossamer-tiles",
+			Generator:              "signalforge/tilebundle",
 			GeneratorVersion:       generatorVersion,
 			GeneratedFrom:          modelIDs(models),
 			HeavyComputationPolicy: "offline_on_build_host",

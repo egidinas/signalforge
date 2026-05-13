@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	SchemaName    = "gossamer.telemetry.arrow.v2"
+	SchemaName    = "signalforge.telemetry.arrow.v2"
 	TransportMIME = "application/vnd.apache.arrow.stream"
 	BatchSize     = 10000
 )

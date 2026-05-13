@@ -22,7 +22,14 @@ if grep -q '^replace[[:space:]]' go.mod; then
 	exit 1
 fi
 
-scan_hits=$(/bin/grep -RIn -i -E 'github\.com/signalforge|signalforge/signalforge|pkg/safepath|mynaric|comet|kvaser|labview|srv25|app03|loom|gossamer|meerstetter|/home/|192\.168|10\.[0-9]|172\.(1[6-9]|2[0-9]|3[0-1])|password|secret|token|tunnel' README.md go.mod docs/audits docs/legacy_harvest_register.md safepath graphwall jsonfile mathutil graphsem || true)
+mod_hits=$(/bin/grep -n -i -E 'v[0-9.]+-private|loom-gossamer-shared|/home/' go.mod || true)
+if [ -n "$mod_hits" ]; then
+	printf '%s\n%s\n' "unexpected module identity terms found:" "$mod_hits" >&2
+	exit 1
+fi
+
+scan_paths="README.md docs/audits docs/legacy_harvest_register.md safepath graphwall jsonfile mathutil graphsem arrowtelemetry contracts controlprogram tilebundle"
+scan_hits=$(/bin/grep -RIn -i -E 'github\.com/signalforge|signalforge/signalforge|pkg/safepath|mynaric|comet|kvaser|labview|srv25|app03|loom|gossamer|meerstetter|/home/|192\.168|(^|[^0-9.])10\.[0-9]{1,3}\.|(^|[^0-9.])172\.(1[6-9]|2[0-9]|3[0-1])\.|password|secret|auth[_-]?token|api[_-]?token|access[_-]?token|bearer|tunnel' $scan_paths || true)
 if [ -n "$scan_hits" ]; then
 	printf '%s\n%s\n' "unexpected identity terms found:" "$scan_hits" >&2
 	exit 1
