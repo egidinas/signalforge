@@ -3,8 +3,8 @@
 ## Module
 
 - Proposed package: `github.com/egidinas/signalforge/stability`
-- Source path: `loom/internal/stability` and `mynaric_telemetry/internal/stability`
-- Public problem solved: Provide reusable stability-window, threshold, and observation primitives for telemetry systems without importing private Loom or legacy MyNaric runtime code.
+- Source path: `loom/internal/stability` and `private-telemetry/internal/stability`
+- Public problem solved: Provide reusable stability-window, threshold, and observation primitives for telemetry systems without importing private Loom or legacy private telemetry system runtime code.
 - Public API summary: Stability configuration, bounded rolling buffers, signal/window/group evaluation, linear-drift and target-deviation evaluators, buffer import/export, dwell-gate transitions, and config validation.
 
 ## Clean-Room Review
@@ -32,13 +32,13 @@
 ## Source Probe
 
 - `loom/internal/stability` contains the preferred public-core shape: monitor types, rolling buffers, group policy evaluation, and linear drift evaluation implemented with standard-library math only.
-- `mynaric_telemetry/internal/stability` contains additional behavior that must not be lost: buffer import/export helpers and dwell-gate transition evaluation.
+- `private-telemetry/internal/stability` contains additional behavior that must not be lost: buffer import/export helpers and dwell-gate transition evaluation.
 - Current integration risk: `loom/cmd/mod-stability/main.go` already has unrelated local edits, so wrapper rewiring should wait until the public core has parity tests and the dirty wrapper state is reviewed.
 
 ## Extraction Decision
 
 - Seed the SignalForge package from the common denominator, then add the dwell-gate transition behavior as an explicit public primitive.
-- Prefer the Loom local linear-regression implementation over the MyNaric external `montanaflynn/stats` dependency unless parity testing proves a behavior gap.
+- Prefer the Loom local linear-regression implementation over the private telemetry system external `montanaflynn/stats` dependency unless parity testing proves a behavior gap.
 - First required tests: linear drift, deviation-from-target, N-of-M group policy, rolling-buffer eviction and snapshot, buffer import/export, and dwell-gate transition states.
 
 ## Extraction Result

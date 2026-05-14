@@ -18,14 +18,6 @@ This note records the current public-release posture for SignalForge.
   technical panel. A rename before the first stable tag is low-cost.
 - Approve the exact public module path before cutting a stable `v0.1.0` tag.
 
-## Audit Note
-
-- `docs/audits/cantrace.md` and `docs/audits/stability.md` name
-  `mynaric_telemetry` as extraction source paths. These are provenance records,
-  not runtime dependencies. Review before first public promotion whether the
-  employer name in audit docs is acceptable or should be anonymised to a generic
-  label (e.g. "prior private telemetry system").
-
 ## Public Consumer Proof
 
 Before calling SignalForge publication-ready, the first public consumer proof should satisfy all of the following:

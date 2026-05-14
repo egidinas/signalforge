@@ -3,7 +3,7 @@
 ## Module
 
 - Proposed package: `github.com/egidinas/signalforge/dbcmeta`
-- Source path: `kvaser-dual-bridge/internal/dbcmeta` and `mynaric_telemetry/internal/dbcmeta`
+- Source path: `kvaser-dual-bridge/internal/dbcmeta` and `private-telemetry/internal/dbcmeta`
 - Public problem solved: Provide shared, public-safe DBC catalogue metadata and grouping helpers without private DBC files or deployment defaults.
 - Public API summary: DBC subset parser, CAN payload signal decoder, canonical DBC catalogue grouping, duplicate and semantic grouping summaries, per-message fingerprints, and observed-traffic ranking against catalogue candidates.
 

@@ -3,7 +3,7 @@
 ## Module
 
 - Proposed package: `github.com/egidinas/signalforge/ringbuf`
-- Source path: `meerstetter-go/canring` and `mynaric_telemetry/internal/utils/circular_buffer.go`
+- Source path: `meerstetter-go/canring` and `private-telemetry/internal/utils/circular_buffer.go`
 - Public problem solved: Provide generic in-memory and optionally file-backed bounded rings for edge telemetry bootstrap, fallback, and late-owner replay.
 - Public API summary: Generic RAM `Buffer[T]` with caller-provided byte sizer,
   deterministic oldest-first eviction, `Push`, `Snapshot`, `Drain`, `Len`,

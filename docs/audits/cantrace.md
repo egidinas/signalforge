@@ -3,7 +3,7 @@
 ## Module
 
 - Proposed package: `github.com/egidinas/signalforge/cantrace`
-- Source path: `kvaser-dual-bridge/internal/netcan` and `mynaric_telemetry/internal/canrouter`
+- Source path: `kvaser-dual-bridge/internal/netcan` and `private-telemetry/internal/canrouter`
 - Public problem solved: Provide reusable CAN raw-frame, DLC, and PCAP-oriented helpers shared by vendor-specific bridges and private Loom ingest modules.
 - Public API summary: Classic CAN `Frame`, data normalization, byte-string parsing, DLC fallback/resolution against caller-provided maps, frame data formatting, and caller-provided flag naming/skip-policy helpers.
 
@@ -31,7 +31,7 @@
 
 ## Extraction Result
 
-- Added `cantrace.Frame` for the duplicated CAN frame shape found in MyNaric and Kvaser bridge sources.
+- Added `cantrace.Frame` for the duplicated CAN frame shape found in private telemetry system and Kvaser bridge sources.
 - Added `NormalizeData` and `NewFrame` to centralize classic CAN DLC validation.
 - Added `ParseDataBytes`, `FrameData`, `DataHex`, and `FrameHex` to replace ad-hoc CLI parsing and monitor formatting.
 - Added `InferFallbackDLC` and `ResolveDLC` for generic DLC fallback behavior while keeping DBC parsing downstream.
@@ -44,4 +44,4 @@
 - Host-control and status packet parsing.
 - DBC parser integration.
 
-Those pieces should move only after public-safe synthetic fixtures cover both the `kvaser-dual-bridge/internal/netcan` and `mynaric_telemetry/internal/canrouter` behavior.
+Those pieces should move only after public-safe synthetic fixtures cover both the `kvaser-dual-bridge/internal/netcan` and `private-telemetry/internal/canrouter` behavior.
