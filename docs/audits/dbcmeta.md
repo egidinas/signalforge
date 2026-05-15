@@ -3,7 +3,7 @@
 ## Module
 
 - Proposed package: `github.com/egidinas/signalforge/dbcmeta`
-- Source path: `kvaser-dual-bridge/internal/dbcmeta` and `private-telemetry/internal/dbcmeta`
+- Source path: internal DBC metadata helpers.
 - Public problem solved: Provide shared, public-safe DBC catalogue metadata and grouping helpers without private DBC files or deployment defaults.
 - Public API summary: DBC subset parser, CAN payload signal decoder, canonical DBC catalogue grouping, duplicate and semantic grouping summaries, per-message fingerprints, and observed-traffic ranking against catalogue candidates.
 
@@ -13,7 +13,7 @@
 - Fixtures/examples included: Synthetic DBC metadata fixtures only.
 - Fixtures/examples rejected: Live fleet DBC directories and private signal catalogues.
 - Renames performed: Package renamed from internal DBC metadata helpers to public `dbcmeta`; exported shapes use neutral catalogue, candidate, fingerprint, and observed-message names.
-- Compatibility aliases needed: Loom and Kvaser consumers may need import aliases during migration.
+- Compatibility aliases needed: Downstream consumers may need import aliases during migration.
 
 ## Public Build
 
@@ -27,7 +27,7 @@
 - Reviewer: migration backlog
 - Date: 2026-05-14
 - Decision: accepted-public-core
-- Notes: Seeded from the richer Kvaser implementation. The public core is limited to parsing, catalogue grouping, message fingerprints, and observed-traffic ranking. UI evolution helpers, private DBC directories, source-catalogue adapters, and graph provenance adapters remain downstream work.
+- Notes: Seeded from the richer internal implementation. The public core is limited to parsing, catalogue grouping, message fingerprints, and observed-traffic ranking. UI evolution helpers, private DBC directories, source-catalogue adapters, and graph provenance adapters remain downstream work.
 
 ## Extraction Result
 
@@ -38,6 +38,6 @@
 
 ## Deferred Work
 
-- Rewire Kvaser bridge DBC metadata consumers through the public core.
-- Rewire Loom source-catalogue and graph provenance adapters through the public core.
+- Rewire bridge DBC metadata consumers through the public core.
+- Rewire source-catalogue and graph provenance adapters through the public core.
 - Add parity tests against scrubbed fixture outputs before archiving either legacy implementation.

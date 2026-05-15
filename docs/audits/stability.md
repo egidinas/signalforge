@@ -3,8 +3,8 @@
 ## Module
 
 - Proposed package: `github.com/egidinas/signalforge/stability`
-- Source path: `loom/internal/stability` and `private-telemetry/internal/stability`
-- Public problem solved: Provide reusable stability-window, threshold, and observation primitives for telemetry systems without importing private Loom or legacy private telemetry system runtime code.
+- Source path: internal stability helpers.
+- Public problem solved: Provide reusable stability-window, threshold, and observation primitives for telemetry systems without importing private runtime code.
 - Public API summary: Stability configuration, bounded rolling buffers, signal/window/group evaluation, linear-drift and target-deviation evaluators, buffer import/export, dwell-gate transitions, and config validation.
 
 ## Clean-Room Review
@@ -13,7 +13,7 @@
 - Fixtures/examples included: To be synthetic only.
 - Fixtures/examples rejected: Any real device names, private route labels, operator screenshots, or historical captures.
 - Renames performed: Pending.
-- Compatibility aliases needed: Loom may keep private adapters around the public core.
+- Compatibility aliases needed: Downstream systems may keep private adapters around the public core.
 
 ## Public Build
 
@@ -27,18 +27,18 @@
 - Reviewer: migration backlog
 - Date: 2026-05-14
 - Decision: accepted-public-core
-- Notes: SignalForge now owns the generic stability core. Loom wrapper rewiring remains gated on the unrelated dirty state in `loom/cmd/mod-stability/main.go`.
+- Notes: SignalForge now owns the generic stability core. Downstream wrapper rewiring remains gated on unrelated local wrapper state.
 
 ## Source Probe
 
-- `loom/internal/stability` contains the preferred public-core shape: monitor types, rolling buffers, group policy evaluation, and linear drift evaluation implemented with standard-library math only.
+- One internal stability helper contains the preferred public-core shape: monitor types, rolling buffers, group policy evaluation, and linear drift evaluation implemented with standard-library math only.
 - `private-telemetry/internal/stability` contains additional behavior that must not be lost: buffer import/export helpers and dwell-gate transition evaluation.
-- Current integration risk: `loom/cmd/mod-stability/main.go` already has unrelated local edits, so wrapper rewiring should wait until the public core has parity tests and the dirty wrapper state is reviewed.
+- Current integration risk: downstream wrapper files already have unrelated local edits, so wrapper rewiring should wait until the public core has parity tests and the dirty wrapper state is reviewed.
 
 ## Extraction Decision
 
 - Seed the SignalForge package from the common denominator, then add the dwell-gate transition behavior as an explicit public primitive.
-- Prefer the Loom local linear-regression implementation over the private telemetry system external `montanaflynn/stats` dependency unless parity testing proves a behavior gap.
+- Prefer the local standard-library linear-regression implementation over the private telemetry system external `montanaflynn/stats` dependency unless parity testing proves a behavior gap.
 - First required tests: linear drift, deviation-from-target, N-of-M group policy, rolling-buffer eviction and snapshot, buffer import/export, and dwell-gate transition states.
 
 ## Extraction Result

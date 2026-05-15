@@ -8,7 +8,10 @@ This note records the current public-release posture for SignalForge.
 - Remote: `git@github.com:egidinas/signalforge.git`
 - License: **MIT** — decided 2026-05-14.
 - Tag: **v0.0.1-dev** — cut 2026-05-14 as consumer-proof baseline. Not a stable release.
-- All 16 packages pass `go test ./...`. No `replace` directives in `go.mod`.
+- All 16 Go packages pass `go test ./...`. No `replace` directives in
+  `go.mod`.
+- The web package is a development-stage React/Vite package. Its current proof
+  gates are Jest tests, TypeScript build, library build, and demo build.
 
 ## Pending Decisions
 

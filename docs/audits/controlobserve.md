@@ -3,7 +3,7 @@
 ## Module
 
 - Proposed package: `github.com/egidinas/signalforge/controlobserve`
-- Source path: `meerstetter-go/control`
+- Source path: internal control-observation helper.
 - Public problem solved: Provide passive transition observation and recommendation primitives that can be reused by PID-like systems without embedding device write authority.
 - Public API summary: `Sample`, `TransitionDetector`, `TransitionEvent`, `TransitionCharacterization`, and `PIDAdvisor`. Recommendations are observation-only and carry downstream review metadata.
 
@@ -12,8 +12,8 @@
 - Private inputs excluded: TEC write paths, hardware limits, self-tune commands, operator approval policy, command leases, and private experiments.
 - Fixtures/examples included: Synthetic setpoint/response traces only.
 - Fixtures/examples rejected: Real controller traces until explicitly sanitized.
-- Renames performed: Meerstetter-local `control` package extracted as public `controlobserve`; algorithm names kept generic and device-neutral.
-- Compatibility aliases needed: Meerstetter-Go and Loom retain safety policy and command execution wrappers.
+- Renames performed: internal `control` package extracted as public `controlobserve`; algorithm names kept generic and device-neutral.
+- Compatibility aliases needed: Downstream systems retain safety policy and command execution wrappers.
 
 ## Public Build
 

@@ -17,8 +17,8 @@ copy.
 | Stability monitor core | SignalForge stability package | Keep generic thresholds, windows, and observations only; no private operator policy. |
 | CAN trace framing and DLC helpers | SignalForge CAN trace package | Keep raw frame/PCAP helpers generic; vendor handles and bus topology stay downstream. |
 | DBC metadata grouping | SignalForge DBC metadata package | Use public fixtures only; private DBC files and route defaults stay downstream. |
-| Priority poll queues | SignalForge pollqueue package | Generic scheduling only; MeCom parameters and TEC semantics stay in Meerstetter-Go. |
+| Priority poll queues | SignalForge pollqueue package | Generic scheduling only; device parameters and controller semantics stay downstream. |
 | Ring buffer and dedup mechanics | SignalForge ringbuf package | Generic records and overwrite semantics only; device ring commands stay downstream. |
 | Streaming reduction statistics | SignalForge stats package | Generic min/max/mean/stddev and windowing only; signal-specific policy stays downstream. |
 | Passive transition/PID observation | SignalForge control-observation package | Recommendation primitives only; device write authority and safety policy stay downstream. |
-| TDMS import contract | Loom importer or third-party library | SignalForge may own neutral import contracts, not private samples or lab procedures. |
+| TDMS import contract | Downstream importer or third-party library | SignalForge may own neutral import contracts, not private samples or lab procedures. |

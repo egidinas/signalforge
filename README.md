@@ -34,6 +34,9 @@ SignalForge should grow from small, audited neutral primitives:
 - compact agent/context encoding;
 - source catalogue and discovery-tree contracts;
 - graph/tile query contracts;
+- React web primitives, starting with [`web`](web), for neutral signal
+  dictionaries, wall management, graph-tile rendering, and tile-pyramid
+  clients;
 - command session and event/audit log primitives;
 - archive/replay interfaces;
 - transport adapter interfaces;

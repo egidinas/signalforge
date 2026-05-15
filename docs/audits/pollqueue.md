@@ -3,7 +3,7 @@
 ## Module
 
 - Proposed package: `github.com/egidinas/signalforge/pollqueue`
-- Source path: `meerstetter-go/mecom/pollqueue.go`
+- Source path: internal parameter-polling queue helper.
 - Public problem solved: Provide reusable priority round-robin polling queues where manual requests can move values to the front without bypassing normal scheduler fairness.
 - Public API summary: Generic `Queue[T,V]` with caller-provided key function,
   normal `Enqueue`, one-shot `EnqueueFront`, duplicate suppression within a
@@ -16,7 +16,7 @@
 - Fixtures/examples rejected: Real TEC catalogues and bus captures.
 - Renames performed: MeCom `Parameter` queue becomes generic item queue with a
   string key function.
-- Compatibility aliases needed: Meerstetter-Go keeps parameter-specific wrappers
+- Compatibility aliases needed: Downstream packages keep parameter-specific wrappers
   and bulk-read frame sizing.
 
 ## Public Build

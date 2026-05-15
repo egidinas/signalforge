@@ -28,7 +28,7 @@ if [ -n "$mod_hits" ]; then
 	exit 1
 fi
 
-scan_paths="README.md docs/audits docs/legacy_harvest_register.md safepath graphwall jsonfile mathutil graphsem arrowtelemetry contracts controlprogram tilebundle"
+scan_paths="README.md docs/audits docs/legacy_harvest_register.md safepath graphwall jsonfile mathutil graphsem arrowtelemetry contracts controlprogram tilebundle cantrace controlobserve dbcmeta pollqueue ringbuf stability stats web/src web/demo web/README.md web/package.json web/jest.config.cjs web/vite.config.ts web/vite.demo.config.ts web/tsconfig.json web/tsconfig.lib.json web/tsconfig.node.json"
 scan_hits=$(/bin/grep -RIn -i -E 'github\.com/signalforge|signalforge/signalforge|pkg/safepath|mynaric|comet|kvaser|labview|srv25|app03|loom|gossamer|meerstetter|/home/|192\.168|(^|[^0-9.])10\.[0-9]{1,3}\.|(^|[^0-9.])172\.(1[6-9]|2[0-9]|3[0-1])\.|password|secret|auth[_-]?token|api[_-]?token|access[_-]?token|bearer|tunnel' $scan_paths || true)
 if [ -n "$scan_hits" ]; then
 	printf '%s\n%s\n' "unexpected identity terms found:" "$scan_hits" >&2
