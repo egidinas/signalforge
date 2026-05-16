@@ -2,6 +2,7 @@ package jsonfile
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -70,6 +71,52 @@ func TestAppendLineRejectsEmptyPath(t *testing.T) {
 	if err := AppendLine("   ", map[string]any{}); err == nil {
 		t.Fatal("expected error for blank path")
 	}
+}
+
+func TestAppendLineReturnsCloseError(t *testing.T) {
+	closeErr := errors.New("close failed")
+	withAppendFile(t, &fakeAppendFile{closeErr: closeErr})
+
+	if err := AppendLine(filepath.Join(t.TempDir(), "out.jsonl"), map[string]any{"id": 1}); !errors.Is(err, closeErr) {
+		t.Fatalf("AppendLine error = %v, want close error", err)
+	}
+}
+
+func TestAppendLinePreservesWriteErrorPrecedence(t *testing.T) {
+	writeErr := errors.New("write failed")
+	closeErr := errors.New("close failed")
+	withAppendFile(t, &fakeAppendFile{writeErr: writeErr, closeErr: closeErr})
+
+	if err := AppendLine(filepath.Join(t.TempDir(), "out.jsonl"), map[string]any{"id": 1}); !errors.Is(err, writeErr) {
+		t.Fatalf("AppendLine error = %v, want write error", err)
+	}
+}
+
+func withAppendFile(t *testing.T, f appendFile) {
+	t.Helper()
+	orig := openAppendFile
+	openAppendFile = func(string) (appendFile, error) {
+		return f, nil
+	}
+	t.Cleanup(func() {
+		openAppendFile = orig
+	})
+}
+
+type fakeAppendFile struct {
+	writeErr error
+	closeErr error
+}
+
+func (f *fakeAppendFile) Write([]byte) (int, error) {
+	if f.writeErr != nil {
+		return 0, f.writeErr
+	}
+	return 1, nil
+}
+
+func (f *fakeAppendFile) Close() error {
+	return f.closeErr
 }
 
 func splitLines(s string) []string {

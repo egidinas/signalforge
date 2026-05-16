@@ -6,6 +6,7 @@ package jsonfile
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -36,17 +37,27 @@ func AppendLine(path string, value any) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
+	f, err := openAppendFile(path)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 	data, err := json.Marshal(value)
 	if err != nil {
+		_ = f.Close()
 		return err
 	}
 	if _, err := f.Write(append(data, '\n')); err != nil {
+		_ = f.Close()
 		return err
 	}
-	return nil
+	return f.Close()
+}
+
+type appendFile interface {
+	io.Writer
+	io.Closer
+}
+
+var openAppendFile = func(path string) (appendFile, error) {
+	return os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 }
