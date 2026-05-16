@@ -1,14 +1,17 @@
 package arrowtelemetry
 
 import (
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/apache/arrow-go/v18/arrow/array"
 	"github.com/apache/arrow-go/v18/arrow/ipc"
 	"github.com/egidinas/signalforge/contracts"
+	"github.com/parquet-go/parquet-go"
 )
 
 func TestWriteCampaignProducesCanonicalArrowRows(t *testing.T) {
@@ -80,6 +83,7 @@ func TestWriteCampaignProducesCanonicalArrowRows(t *testing.T) {
 	if !state.IsNull(0) || state.ValueStr(3) != "nominal" {
 		t.Fatalf("state column null/value mismatch")
 	}
+	assertParquetNullParity(t, strings.TrimSuffix(path, ".arrow")+".parquet")
 }
 
 func TestWriteCampaignPreservesExistingArtifactsOnFailure(t *testing.T) {
@@ -136,5 +140,39 @@ func assertFileBytes(t *testing.T, path string, want []byte) {
 	}
 	if string(got) != string(want) {
 		t.Fatalf("%s = %q, want %q", path, string(got), string(want))
+	}
+}
+
+func assertParquetNullParity(t *testing.T, path string) {
+	t.Helper()
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("open parquet: %v", err)
+	}
+	defer f.Close()
+	reader := parquet.NewGenericReader[ParquetRow](f)
+	defer reader.Close()
+
+	rows := make([]ParquetRow, 4)
+	n, err := reader.Read(rows)
+	if err != nil && err != io.EOF {
+		t.Fatalf("read parquet: %v", err)
+	}
+	if n != 4 {
+		t.Fatalf("parquet rows = %d, want 4", n)
+	}
+	for i := 0; i < 3; i++ {
+		if rows[i].Value == nil {
+			t.Fatalf("parquet numeric row %d has nil value", i)
+		}
+		if rows[i].State != nil {
+			t.Fatalf("parquet numeric row %d has state %q, want null", i, *rows[i].State)
+		}
+	}
+	if rows[3].Value != nil {
+		t.Fatalf("parquet state row value = %v, want null", *rows[3].Value)
+	}
+	if rows[3].State == nil || *rows[3].State != "nominal" {
+		t.Fatalf("parquet state row state = %v, want nominal", rows[3].State)
 	}
 }

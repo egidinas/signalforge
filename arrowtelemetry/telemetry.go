@@ -51,17 +51,17 @@ type SignalMeta struct {
 }
 
 type ParquetRow struct {
-	TimestampNS  int64   `parquet:"timestamp_ns"`
-	Sensor       string  `parquet:"sensor"`
-	Value        float64 `parquet:"value"`
-	Unit         string  `parquet:"unit"`
-	CampaignID   string  `parquet:"campaign_id"`
-	Source       string  `parquet:"source"`
-	SeriesRole   string  `parquet:"series_role"`
-	SignalKind   string  `parquet:"signal_kind"`
-	SourceFamily string  `parquet:"source_family"`
-	Quality      string  `parquet:"quality"`
-	State        string  `parquet:"state"`
+	TimestampNS  int64    `parquet:"timestamp_ns"`
+	Sensor       string   `parquet:"sensor"`
+	Value        *float64 `parquet:"value,optional"`
+	Unit         string   `parquet:"unit"`
+	CampaignID   string   `parquet:"campaign_id"`
+	Source       string   `parquet:"source"`
+	SeriesRole   string   `parquet:"series_role"`
+	SignalKind   string   `parquet:"signal_kind"`
+	SourceFamily string   `parquet:"source_family"`
+	Quality      string   `parquet:"quality"`
+	State        *string  `parquet:"state,optional"`
 }
 
 func MetadataFromGraph(model contracts.GraphModel) map[string]SignalMeta {
@@ -218,7 +218,7 @@ func WriteCampaign(path, campaignID string, samples <-chan contracts.TelemetrySa
 			state.AppendNull()
 
 			parquetRows = append(parquetRows, ParquetRow{
-				TimestampNS: timestampNS, Sensor: signalID, Value: v, Unit: item.Unit,
+				TimestampNS: timestampNS, Sensor: signalID, Value: ptrFloat64(v), Unit: item.Unit,
 				CampaignID: campaignID, Source: item.Source, SeriesRole: item.SeriesRole,
 				SignalKind: item.SignalKind, SourceFamily: item.SourceFamily, Quality: sample.Quality,
 			})
@@ -241,10 +241,10 @@ func WriteCampaign(path, campaignID string, samples <-chan contracts.TelemetrySa
 			_ = appendDict(state, sample.States[signalID])
 
 			parquetRows = append(parquetRows, ParquetRow{
-				TimestampNS: timestampNS, Sensor: signalID, Value: 0, Unit: item.Unit,
+				TimestampNS: timestampNS, Sensor: signalID, Unit: item.Unit,
 				CampaignID: campaignID, Source: item.Source, SeriesRole: item.SeriesRole,
 				SignalKind: "state", SourceFamily: item.SourceFamily, Quality: sample.Quality,
-				State: sample.States[signalID],
+				State: ptrString(sample.States[signalID]),
 			})
 			rowCount++
 		}
@@ -392,6 +392,14 @@ func appendDict(builder *array.BinaryDictionaryBuilder, value string) error {
 		value = "unknown"
 	}
 	return builder.AppendString(value)
+}
+
+func ptrFloat64(value float64) *float64 {
+	return &value
+}
+
+func ptrString(value string) *string {
+	return &value
 }
 
 func sortedFloatKeys(values map[string]float64) []string {
