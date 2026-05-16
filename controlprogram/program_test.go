@@ -126,3 +126,27 @@ func TestProgramValidationRejectsAmbiguousPrograms(t *testing.T) {
 		}
 	}
 }
+
+func TestProgramValidationRejectsDurationOverflow(t *testing.T) {
+	program := Program{
+		ID:         "overflow",
+		TargetIDs:  []string{"tec-31"},
+		CycleCount: 2,
+		Steps: []Step{{
+			ID:   "hold",
+			Hold: time.Duration(1<<62) + time.Second,
+			Setpoints: []Setpoint{{
+				Channel: "temperature.object",
+				Value:   20,
+				Unit:    "degC",
+			}},
+		}},
+	}
+
+	if err := program.Validate(); err == nil {
+		t.Fatalf("expected duration overflow to be rejected")
+	}
+	if got := program.TotalDuration(); got != 0 {
+		t.Fatalf("TotalDuration() = %s for overflowing program, want 0", got)
+	}
+}

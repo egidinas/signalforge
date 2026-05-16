@@ -62,16 +62,35 @@ func (p Program) Validate() error {
 			}
 		}
 	}
+	if _, err := p.checkedTotalDuration(); err != nil {
+		return err
+	}
 
 	return nil
 }
 
 func (p Program) TotalDuration() time.Duration {
+	total, err := p.checkedTotalDuration()
+	if err == nil {
+		return total
+	}
+	return 0
+}
+
+func (p Program) checkedTotalDuration() (time.Duration, error) {
+	const maxDuration = time.Duration(1<<63 - 1)
+
 	var perCycle time.Duration
 	for _, step := range p.Steps {
+		if step.Hold > 0 && perCycle > maxDuration-step.Hold {
+			return 0, fmt.Errorf("program %q total duration overflows time.Duration", p.ID)
+		}
 		perCycle += step.Hold
 	}
-	return perCycle * time.Duration(p.CycleCount)
+	if p.CycleCount > 0 && perCycle > maxDuration/time.Duration(p.CycleCount) {
+		return 0, fmt.Errorf("program %q total duration overflows time.Duration", p.ID)
+	}
+	return perCycle * time.Duration(p.CycleCount), nil
 }
 
 func (p Program) TargetCount() int {
