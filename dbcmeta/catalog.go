@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -146,9 +147,11 @@ func LoadFiles(paths []string, directory string) (*Catalog, error) {
 
 	byRaw := make(map[string][]string)
 	bySemantic := make(map[string][]loadedVariant)
+	var loadErrs []error
 	for _, path := range paths {
 		variant, err := loadVariant(path)
 		if err != nil {
+			loadErrs = append(loadErrs, fmt.Errorf("%s: %w", path, err))
 			continue
 		}
 		byRaw[variant.SHA256] = append(byRaw[variant.SHA256], variant.Name)
@@ -214,6 +217,9 @@ func LoadFiles(paths []string, directory string) (*Catalog, error) {
 		return catalog.candidates[i].Representative < catalog.candidates[j].Representative
 	})
 	catalog.CanonicalCount = len(catalog.Candidates)
+	if len(loadErrs) > 0 {
+		return catalog, errors.Join(loadErrs...)
+	}
 	return catalog, nil
 }
 

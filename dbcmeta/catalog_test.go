@@ -3,6 +3,7 @@ package dbcmeta
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -156,10 +157,54 @@ func TestLoadDirKeepsDifferentValueTablesSeparate(t *testing.T) {
 	}
 }
 
-func writeDBC(t *testing.T, dir string, name string, body string) {
+func TestLoadFilesReturnsMissingFileErrors(t *testing.T) {
+	dir := t.TempDir()
+	validPath := writeDBC(t, dir, "Controller.dbc", `
+BO_ 100 State: 1 ECU
+ SG_ mode : 0|1@1+ (1,0) [0|1] "" NODE
+`)
+	missingPath := filepath.Join(dir, "missing.dbc")
+
+	catalog, err := LoadFiles([]string{validPath, missingPath}, dir)
+	if err == nil {
+		t.Fatal("expected missing file error")
+	}
+	if !strings.Contains(err.Error(), missingPath) {
+		t.Fatalf("error %q does not mention missing path %q", err, missingPath)
+	}
+	if catalog == nil || catalog.CanonicalCount != 1 {
+		t.Fatalf("expected partial catalog with one valid candidate, got %#v", catalog)
+	}
+}
+
+func TestLoadDirReturnsMalformedFileErrors(t *testing.T) {
+	dir := t.TempDir()
+	writeDBC(t, dir, "valid.dbc", `
+BO_ 100 State: 1 ECU
+ SG_ mode : 0|1@1+ (1,0) [0|1] "" NODE
+`)
+	malformedPath := writeDBC(t, dir, "malformed.dbc", `SG_ orphan : 0|1@1+ (1,0) [0|1] "" NODE`)
+
+	catalog, err := LoadDir(dir)
+	if err == nil {
+		t.Fatal("expected malformed file error")
+	}
+	if !strings.Contains(err.Error(), malformedPath) {
+		t.Fatalf("error %q does not mention malformed path %q", err, malformedPath)
+	}
+	if catalog == nil || catalog.CanonicalCount != 1 {
+		t.Fatalf("expected partial catalog with one valid candidate, got %#v", catalog)
+	}
+	if !strings.Contains(err.Error(), "no messages found") {
+		t.Fatalf("expected parse error context, got %v", err)
+	}
+}
+
+func writeDBC(t *testing.T, dir string, name string, body string) string {
 	t.Helper()
 	path := filepath.Join(dir, name)
 	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
 		t.Fatalf("write %s: %v", path, err)
 	}
+	return path
 }
