@@ -2,10 +2,12 @@ package arrowtelemetry
 
 import (
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -103,24 +105,52 @@ func MetadataFromGraph(model contracts.GraphModel) map[string]SignalMeta {
 }
 
 func WriteCampaign(path, campaignID string, samples <-chan contracts.TelemetrySample, meta map[string]SignalMeta) error {
-	f, err := os.Create(path)
+	dir := filepath.Dir(path)
+	base := filepath.Base(path)
+	f, err := os.CreateTemp(dir, base+".*.tmp")
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	arrowTempPath := f.Name()
+	fClosed := false
+	commit := false
+	defer func() {
+		if !fClosed {
+			_ = f.Close()
+		}
+		if !commit {
+			_ = os.Remove(arrowTempPath)
+		}
+	}()
 
 	parquetPath := strings.TrimSuffix(path, ".arrow") + ".parquet"
-	pf, err := os.Create(parquetPath)
+	parquetTemp, err := os.CreateTemp(dir, filepath.Base(parquetPath)+".*.tmp")
 	if err != nil {
 		return err
 	}
-	defer pf.Close()
+	parquetTempPath := parquetTemp.Name()
+	parquetTempClosed := false
+	defer func() {
+		if !parquetTempClosed {
+			_ = parquetTemp.Close()
+		}
+		if !commit {
+			_ = os.Remove(parquetTempPath)
+		}
+	}()
 
 	arrowWriter := ipc.NewWriter(f, ipc.WithSchema(TelemetrySchema))
-	defer arrowWriter.Close()
-
-	parquetWriter := parquet.NewGenericWriter[ParquetRow](pf)
-	defer parquetWriter.Close()
+	parquetWriter := parquet.NewGenericWriter[ParquetRow](parquetTemp)
+	arrowWriterClosed := false
+	parquetWriterClosed := false
+	defer func() {
+		if !arrowWriterClosed {
+			_ = arrowWriter.Close()
+		}
+		if !parquetWriterClosed {
+			_ = parquetWriter.Close()
+		}
+	}()
 
 	builder := array.NewRecordBuilder(memory.DefaultAllocator, TelemetrySchema)
 	defer builder.Release()
@@ -233,39 +263,85 @@ func WriteCampaign(path, campaignID string, samples <-chan contracts.TelemetrySa
 	if err := arrowWriter.Close(); err != nil {
 		return err
 	}
+	arrowWriterClosed = true
 	if err := parquetWriter.Close(); err != nil {
 		return err
 	}
+	parquetWriterClosed = true
+	if err := f.Close(); err != nil {
+		return err
+	}
+	fClosed = true
+	if err := parquetTemp.Close(); err != nil {
+		return err
+	}
+	parquetTempClosed = true
 
-	return writeGzipSidecar(path)
+	gzipTempPath, err := writeGzipSidecarTemp(arrowTempPath, path+".gz")
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if !commit {
+			_ = os.Remove(gzipTempPath)
+		}
+	}()
+
+	if err := os.Rename(arrowTempPath, path); err != nil {
+		return err
+	}
+	if err := os.Rename(parquetTempPath, parquetPath); err != nil {
+		return err
+	}
+	if err := os.Rename(gzipTempPath, path+".gz"); err != nil {
+		return err
+	}
+	commit = true
+	return nil
 }
 
 func writeGzipSidecar(path string) error {
-	src, err := os.Open(path)
+	tmpPath, err := writeGzipSidecarTemp(path, path+".gz")
 	if err != nil {
 		return err
+	}
+	if err := os.Rename(tmpPath, path+".gz"); err != nil {
+		_ = os.Remove(tmpPath)
+		return err
+	}
+	return nil
+}
+
+func writeGzipSidecarTemp(path, finalPath string) (string, error) {
+	src, err := os.Open(path)
+	if err != nil {
+		return "", err
 	}
 	defer src.Close()
 
-	dst, err := os.Create(path + ".gz")
+	dst, err := os.CreateTemp(filepath.Dir(finalPath), filepath.Base(finalPath)+".*.tmp")
 	if err != nil {
-		return err
+		return "", err
 	}
+	tmpPath := dst.Name()
 	gz, err := gzip.NewWriterLevel(dst, gzip.BestCompression)
 	if err != nil {
-		_ = dst.Close()
-		return err
+		return "", cleanupTemp(tmpPath, dst.Close())
 	}
 	if _, err := io.Copy(gz, src); err != nil {
-		_ = gz.Close()
-		_ = dst.Close()
-		return err
+		return "", cleanupTemp(tmpPath, errors.Join(err, gz.Close(), dst.Close()))
 	}
 	if err := gz.Close(); err != nil {
-		_ = dst.Close()
-		return err
+		return "", cleanupTemp(tmpPath, errors.Join(err, dst.Close()))
 	}
-	return dst.Close()
+	if err := dst.Close(); err != nil {
+		return "", cleanupTemp(tmpPath, err)
+	}
+	return tmpPath, nil
+}
+
+func cleanupTemp(path string, err error) error {
+	return errors.Join(err, os.Remove(path))
 }
 
 func roundTelemetryValue(signalID, unit string, value float64) float64 {

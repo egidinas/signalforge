@@ -82,10 +82,59 @@ func TestWriteCampaignProducesCanonicalArrowRows(t *testing.T) {
 	}
 }
 
+func TestWriteCampaignPreservesExistingArtifactsOnFailure(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "telemetry.arrow")
+	parquetPath := filepath.Join(dir, "telemetry.parquet")
+	gzipPath := path + ".gz"
+	arrowSentinel := []byte("old arrow")
+	parquetSentinel := []byte("old parquet")
+	gzipSentinel := []byte("old gzip")
+	if err := os.WriteFile(path, arrowSentinel, 0o644); err != nil {
+		t.Fatalf("write sentinel arrow: %v", err)
+	}
+	if err := os.WriteFile(parquetPath, parquetSentinel, 0o644); err != nil {
+		t.Fatalf("write sentinel parquet: %v", err)
+	}
+	if err := os.WriteFile(gzipPath, gzipSentinel, 0o644); err != nil {
+		t.Fatalf("write sentinel gzip: %v", err)
+	}
+
+	ch := make(chan contracts.TelemetrySample, 2)
+	ch <- contracts.TelemetrySample{
+		Timestamp: "2026-01-15T10:00:00Z",
+		Signals:   map[string]float64{"temperature": 21.5},
+		Quality:   "fresh",
+	}
+	ch <- contracts.TelemetrySample{
+		Timestamp: "not-a-timestamp",
+		Signals:   map[string]float64{"temperature": 22.0},
+		Quality:   "fresh",
+	}
+	close(ch)
+	if err := WriteCampaign(path, "campaign", ch, map[string]SignalMeta{"temperature": {Unit: "degC"}}); err == nil {
+		t.Fatal("WriteCampaign succeeded with malformed timestamp")
+	}
+	assertFileBytes(t, path, arrowSentinel)
+	assertFileBytes(t, parquetPath, parquetSentinel)
+	assertFileBytes(t, gzipPath, gzipSentinel)
+}
+
 func mustParse(value string) time.Time {
 	t, err := time.Parse(time.RFC3339, value)
 	if err != nil {
 		panic(err)
 	}
 	return t
+}
+
+func assertFileBytes(t *testing.T, path string, want []byte) {
+	t.Helper()
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	if string(got) != string(want) {
+		t.Fatalf("%s = %q, want %q", path, string(got), string(want))
+	}
 }
