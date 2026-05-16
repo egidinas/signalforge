@@ -26,9 +26,9 @@ type Window struct {
 }
 
 // Add folds one value into the window. It returns false when the value was not
-// accepted, currently only for NaN.
+// accepted, currently only for non-finite values.
 func (w *Window) Add(value float64) bool {
-	if math.IsNaN(value) {
+	if math.IsNaN(value) || math.IsInf(value, 0) {
 		return false
 	}
 	if w.count == 0 {

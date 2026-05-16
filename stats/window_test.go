@@ -41,6 +41,30 @@ func TestWindowIgnoresNaN(t *testing.T) {
 	}
 }
 
+func TestWindowIgnoresInfinities(t *testing.T) {
+	var w Window
+	if w.Add(math.Inf(1)) {
+		t.Fatal("+Inf was accepted")
+	}
+	if w.Add(math.Inf(-1)) {
+		t.Fatal("-Inf was accepted")
+	}
+	if !w.Add(5) || !w.Add(7) {
+		t.Fatal("finite value was rejected")
+	}
+
+	got, ok := w.Snapshot()
+	if !ok {
+		t.Fatal("expected summary")
+	}
+	if got.Count != 2 || got.Mean != 6 || got.Min != 5 || got.Max != 7 {
+		t.Fatalf("summary = %#v", got)
+	}
+	if math.IsNaN(got.Mean) || math.IsNaN(got.StdDev) {
+		t.Fatalf("summary contains NaN: %#v", got)
+	}
+}
+
 func TestWindowEmptyAndReset(t *testing.T) {
 	var w Window
 	if _, ok := w.Snapshot(); ok {
