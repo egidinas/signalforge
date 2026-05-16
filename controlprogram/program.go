@@ -81,5 +81,43 @@ func (p Program) TargetCount() int {
 func (p Program) CloneForTargets(targetIDs []string) Program {
 	clone := p
 	clone.TargetIDs = append([]string(nil), targetIDs...)
+	clone.Steps = cloneSteps(p.Steps)
+	clone.Metadata = cloneStringMap(p.Metadata)
 	return clone
+}
+
+func cloneSteps(steps []Step) []Step {
+	if steps == nil {
+		return nil
+	}
+	out := make([]Step, len(steps))
+	for i, step := range steps {
+		out[i] = step
+		out[i].Setpoints = cloneSetpoints(step.Setpoints)
+		out[i].Metadata = cloneStringMap(step.Metadata)
+	}
+	return out
+}
+
+func cloneSetpoints(setpoints []Setpoint) []Setpoint {
+	if setpoints == nil {
+		return nil
+	}
+	out := make([]Setpoint, len(setpoints))
+	for i, setpoint := range setpoints {
+		out[i] = setpoint
+		out[i].Metadata = cloneStringMap(setpoint.Metadata)
+	}
+	return out
+}
+
+func cloneStringMap(values map[string]string) map[string]string {
+	if values == nil {
+		return nil
+	}
+	out := make(map[string]string, len(values))
+	for key, value := range values {
+		out[key] = value
+	}
+	return out
 }
