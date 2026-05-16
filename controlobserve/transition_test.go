@@ -63,6 +63,21 @@ func TestTransitionDetectorIgnoresNaN(t *testing.T) {
 	}
 }
 
+func TestTransitionDetectorDefaultDoesNotTriggerOnFlatBaseline(t *testing.T) {
+	detector := NewTransitionDetector(TransitionDetectorConfig{})
+	start := time.Unix(200, 0)
+
+	for i := 0; i < 32; i++ {
+		event, ok := detector.Observe(Sample{
+			Time:  start.Add(time.Duration(i) * time.Second),
+			Value: 12.5,
+		})
+		if ok {
+			t.Fatalf("unexpected transition for flat baseline at sample %d: %+v", i, event)
+		}
+	}
+}
+
 func TestPIDAdvisorReturnsConservativeObservationOnlyRecommendation(t *testing.T) {
 	advisor := NewPIDAdvisor(PIDAdvisorConfig{
 		MinimumEvents:       2,

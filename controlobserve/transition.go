@@ -83,7 +83,7 @@ func (d *TransitionDetector) Observe(sample Sample) (TransitionEvent, bool) {
 	sigma := math.Sqrt(math.Max(d.variance, 0))
 	delta := sample.Value - d.mean
 	threshold := math.Max(d.cfg.MinimumMagnitude, d.cfg.SigmaThreshold*sigma)
-	if d.count >= d.cfg.MinimumBaseline && !d.triggered && math.Abs(delta) >= threshold {
+	if d.count >= d.cfg.MinimumBaseline && !d.triggered && math.Abs(delta) > threshold {
 		d.triggered = true
 		direction := TransitionRising
 		if delta < 0 {
