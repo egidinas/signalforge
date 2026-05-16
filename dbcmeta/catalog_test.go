@@ -134,6 +134,28 @@ VAL_ 100 mode 0 "off" 1 "on";
 	}
 }
 
+func TestLoadDirKeepsDifferentValueTablesSeparate(t *testing.T) {
+	dir := t.TempDir()
+	writeDBC(t, dir, "Controller_A.dbc", `
+	BO_ 100 State: 1 ECU
+	 SG_ mode : 0|2@1+ (1,0) [0|3] "" NODE
+	VAL_ 100 mode 0 "off" 1 "on" 2 "fault";
+	`)
+	writeDBC(t, dir, "Controller_B.dbc", `
+	BO_ 100 State: 1 ECU
+	 SG_ mode : 0|2@1+ (1,0) [0|3] "" NODE
+	VAL_ 100 mode 0 "idle" 1 "active" 2 "fault";
+	`)
+
+	catalog, err := LoadDir(dir)
+	if err != nil {
+		t.Fatalf("LoadDir: %v", err)
+	}
+	if catalog.CanonicalCount != 2 {
+		t.Fatalf("expected value-table variants to stay separate, got %d canonical candidates", catalog.CanonicalCount)
+	}
+}
+
 func writeDBC(t *testing.T, dir string, name string, body string) {
 	t.Helper()
 	path := filepath.Join(dir, name)

@@ -450,7 +450,7 @@ func semanticSignature(parsed *File, fallback []byte) string {
 		signals := append([]Signal(nil), msg.Signals...)
 		sort.Slice(signals, func(i, j int) bool { return strings.ToLower(signals[i].Name) < strings.ToLower(signals[j].Name) })
 		for _, sig := range signals {
-			fmt.Fprintf(&buf, "SG_ %s %d %d %t %t %.12g %.12g %.12g %.12g %s\n",
+			fmt.Fprintf(&buf, "SG_ %s %d %d %t %t %.12g %.12g %.12g %.12g %s bool=%t enum=%t val=%s\n",
 				strings.ToLower(sig.Name),
 				sig.StartBit,
 				sig.Length,
@@ -461,6 +461,9 @@ func semanticSignature(parsed *File, fallback []byte) string {
 				sig.Min,
 				sig.Max,
 				strings.ToLower(strings.TrimSpace(sig.Unit)),
+				sig.IsBoolean,
+				sig.IsEnum,
+				valueTableSignature(sig.ValueTable),
 			)
 		}
 	}
@@ -469,6 +472,23 @@ func semanticSignature(parsed *File, fallback []byte) string {
 		sum = sha256.Sum256(fallback)
 	}
 	return hex.EncodeToString(sum[:])
+}
+
+func valueTableSignature(table map[float64]string) string {
+	if len(table) == 0 {
+		return ""
+	}
+	keys := make([]float64, 0, len(table))
+	for key := range table {
+		keys = append(keys, key)
+	}
+	sort.Float64s(keys)
+
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		parts = append(parts, fmt.Sprintf("%.12g=%s", key, strings.ToLower(strings.TrimSpace(table[key]))))
+	}
+	return strings.Join(parts, ",")
 }
 
 func sortedMessageIDs(messages map[uint32]*Message) []uint32 {
