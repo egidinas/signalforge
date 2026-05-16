@@ -66,3 +66,25 @@ func TestCalculateViewport(t *testing.T) {
 		})
 	}
 }
+
+func TestSemanticAggregateUsesCanonicalUnitAliases(t *testing.T) {
+	tests := []struct {
+		name string
+		unit string
+		want string
+	}{
+		{name: "watts", unit: "watts", want: AggregatePower},
+		{name: "uppercase watt", unit: "W", want: AggregatePower},
+		{name: "degrees celsius symbol", unit: "°C", want: AggregateTemperature},
+		{name: "celsius word", unit: "celsius", want: AggregateTemperature},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := SemanticAggregate(SemanticInput{Unit: tt.unit})
+			if got != tt.want {
+				t.Fatalf("SemanticAggregate(Unit: %q) = %q, want %q", tt.unit, got, tt.want)
+			}
+		})
+	}
+}

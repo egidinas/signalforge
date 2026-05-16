@@ -280,9 +280,9 @@ func containsAny(text string, needles ...string) bool {
 }
 
 func unitIsAny(unit string, values ...string) bool {
-	unit = strings.ToLower(strings.TrimSpace(unit))
+	unit = CanonicalUnitKey(unit)
 	for _, value := range values {
-		if unit == value {
+		if unit == CanonicalUnitKey(value) {
 			return true
 		}
 	}
