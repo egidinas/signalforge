@@ -58,6 +58,28 @@ func TestBuildTilePreservesMinMaxEnvelopeSpike(t *testing.T) {
 	}
 }
 
+func TestBuildTileHonorsSmallLevelMaxPoints(t *testing.T) {
+	model := smallModel()
+	model.TileManifest.Levels[0].MaxPoints = 3
+	trace := &model.HeroGraph.Traces[0]
+	trace.Values = []contracts.GraphPoint{
+		{Timestamp: "2026-01-01T00:00:00Z", Value: 10},
+		{Timestamp: "2026-01-01T00:01:00Z", Value: -20},
+		{Timestamp: "2026-01-01T00:02:00Z", Value: 90},
+		{Timestamp: "2026-01-01T00:03:00Z", Value: 30},
+	}
+
+	tile, err := BuildTile(model, "thermal_program", "minute", "", "", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	actual := seriesByID(tile, "trace.actual.chamber_air")
+	if len(actual.Points) > 3 {
+		t.Fatalf("materialized tile has %d points, want <= 3: %+v", len(actual.Points), actual.Points)
+	}
+}
+
 func TestBuildTileCapsMaterializedPointsAndRoundsValues(t *testing.T) {
 	model := smallModel()
 	model.TileManifest.Levels[0].MaxPoints = materializedMaxPoints * 3

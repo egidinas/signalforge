@@ -450,7 +450,7 @@ func decimate(points []contracts.GraphPoint, maxPoints int) []contracts.GraphPoi
 		}
 		out = appendUniquePoints(out, points[from], minPoint, maxPoint, points[to-1])
 	}
-	return out
+	return capDecimatedPoints(out, maxPoints)
 }
 
 func normalizePoints(points []contracts.GraphPoint) []contracts.GraphPoint {
@@ -469,6 +469,40 @@ func normalizePoints(points []contracts.GraphPoint) []contracts.GraphPoint {
 		}
 		out = append(out, p)
 	}
+	return out
+}
+
+func capDecimatedPoints(points []contracts.GraphPoint, maxPoints int) []contracts.GraphPoint {
+	if maxPoints <= 0 || len(points) <= maxPoints {
+		return points
+	}
+	sorted := append([]contracts.GraphPoint(nil), points...)
+	sort.SliceStable(sorted, func(i, j int) bool {
+		return sorted[i].Timestamp < sorted[j].Timestamp
+	})
+	if maxPoints == 1 {
+		return sorted[:1]
+	}
+	if maxPoints == 2 {
+		return appendUniquePoints(sorted[:1], sorted[len(sorted)-1])
+	}
+
+	minPoint, maxPoint := sorted[0], sorted[0]
+	for _, point := range sorted {
+		if point.Value < minPoint.Value {
+			minPoint = point
+		}
+		if point.Value > maxPoint.Value {
+			maxPoint = point
+		}
+	}
+	out := appendUniquePoints([]contracts.GraphPoint{}, sorted[0], minPoint, maxPoint, sorted[len(sorted)-1])
+	if len(out) > maxPoints {
+		out = out[:maxPoints]
+	}
+	sort.SliceStable(out, func(i, j int) bool {
+		return out[i].Timestamp < out[j].Timestamp
+	})
 	return out
 }
 
