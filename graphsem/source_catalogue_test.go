@@ -79,6 +79,41 @@ func TestSourceCatalogueValidateAndResolveSelection(t *testing.T) {
 	}
 }
 
+func TestSourceCatalogueRejectsDuplicateSelectedTraceID(t *testing.T) {
+	catalogue := SourceCatalogue{
+		SchemaVersion: CurrentSourceCatalogueSchemaVersion,
+		SourceID:      "fixture_source",
+		SourceFamily:  SourceFamilyMeComTec,
+		Entries: []SourceCatalogueRow{
+			{
+				TraceID:     "fixture.channel_01.temperature_c",
+				RawName:     "TEMP_CH1",
+				DisplayName: "Channel 01 temperature",
+				Unit:        "degC",
+				ValueType:   "float",
+				Access:      "subscribe",
+				GraphType:   "line",
+				Category:    CategoryThermal,
+				Kind:        KindContinuous,
+				Role:        RoleMonitor,
+				DefaultHint: HintLine,
+			},
+		},
+	}
+	selection := SourceSignalSelection{
+		SchemaVersion: CurrentSourceCatalogueSchemaVersion,
+		SourceID:      "fixture_source",
+		Signals: []SelectedSignal{
+			{SignalID: "fixture.temp.primary", TraceID: "fixture.channel_01.temperature_c"},
+			{SignalID: "fixture.temp.alias", TraceID: "fixture.channel_01.temperature_c"},
+		},
+	}
+
+	if err := selection.ValidateAgainst(catalogue); err == nil {
+		t.Fatalf("expected duplicate trace_id selection to be rejected")
+	}
+}
+
 func TestSourceCatalogueRejectsInvalidRows(t *testing.T) {
 	catalogue := SourceCatalogue{
 		SchemaVersion: CurrentSourceCatalogueSchemaVersion,

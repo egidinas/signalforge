@@ -230,7 +230,8 @@ func (s SourceSignalSelection) ValidateAgainst(c SourceCatalogue) error {
 		return fmt.Errorf("source signal selection source_family %q does not match catalogue source_family %q", s.SourceFamily, c.SourceFamily)
 	}
 	entries := c.entriesByTraceID()
-	seen := map[SignalID]struct{}{}
+	seenSignalIDs := map[SignalID]struct{}{}
+	seenTraceIDs := map[string]struct{}{}
 	for i, signal := range s.Signals {
 		if signal.SignalID == "" {
 			return fmt.Errorf("source signal selection entry %d signal_id is required", i)
@@ -241,10 +242,14 @@ func (s SourceSignalSelection) ValidateAgainst(c SourceCatalogue) error {
 		if _, ok := entries[signal.TraceID]; !ok {
 			return fmt.Errorf("source signal selection entry %d trace_id %q is not in source catalogue", i, signal.TraceID)
 		}
-		if _, ok := seen[signal.SignalID]; ok {
+		if _, ok := seenSignalIDs[signal.SignalID]; ok {
 			return fmt.Errorf("source signal selection duplicate signal_id %q", signal.SignalID)
 		}
-		seen[signal.SignalID] = struct{}{}
+		if _, ok := seenTraceIDs[signal.TraceID]; ok {
+			return fmt.Errorf("source signal selection duplicate trace_id %q", signal.TraceID)
+		}
+		seenSignalIDs[signal.SignalID] = struct{}{}
+		seenTraceIDs[signal.TraceID] = struct{}{}
 	}
 	return nil
 }
