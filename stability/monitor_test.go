@@ -59,6 +59,38 @@ func TestMonitorUnstableOnRamp(t *testing.T) {
 	}
 }
 
+func TestMonitorPropagatesApproachingStatus(t *testing.T) {
+	cfg := testConfig()
+	cfg.Windows[0].Criteria = Criteria{
+		MaxRangeC:         1.0,
+		ApproachThreshold: 0.8,
+	}
+	monitor := NewMonitor(cfg)
+	start := time.Unix(1000, 0)
+	for i := 0; i <= 60; i += 10 {
+		value := 20.0
+		if i == 60 {
+			value = 20.9
+		}
+		monitor.Push("tec1", start.Add(time.Duration(i)*time.Second), value)
+	}
+	state := monitor.Evaluate(start.Add(time.Minute))
+	signal := state.Signals["tec1"]
+	window := signal.Windows["short"]
+	if window.Status != StatusApproaching {
+		t.Fatalf("window status = %s, want %s", window.Status, StatusApproaching)
+	}
+	if signal.Status != StatusApproaching {
+		t.Fatalf("signal status = %s, want %s", signal.Status, StatusApproaching)
+	}
+	if state.OverallStatus != StatusApproaching {
+		t.Fatalf("overall status = %s, want %s", state.OverallStatus, StatusApproaching)
+	}
+	if state.StableSignals != 0 {
+		t.Fatalf("stable signals = %d, want 0", state.StableSignals)
+	}
+}
+
 func TestRollingBufferEviction(t *testing.T) {
 	rb := NewRollingBuffer(time.Second)
 	start := time.Unix(1000, 0)

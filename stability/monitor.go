@@ -36,13 +36,7 @@ func (m *Monitor) Evaluate(now time.Time) State {
 		for _, window := range m.config.Windows {
 			stats := evaluateWindow(buffer, now, window)
 			windowStates[window.Name] = stats
-			if stats.Status == StatusBreached {
-				status = StatusBreached
-			} else if stats.Status == StatusInsufficientHistory && status != StatusBreached {
-				status = StatusInsufficientHistory
-			} else if stats.Status == StatusUnstable && status == StatusStable {
-				status = StatusUnstable
-			}
+			status = moreSevereStatus(status, stats.Status)
 		}
 		if status == StatusStable {
 			stableSignals++
@@ -57,16 +51,11 @@ func (m *Monitor) Evaluate(now time.Time) State {
 	total := len(signalStates)
 	overall := StatusStable
 	if stableSignals < required {
-		overall = StatusUnstable
 		for _, state := range signalStates {
-			if state.Status == StatusInsufficientHistory {
-				overall = StatusInsufficientHistory
-				break
-			}
-			if state.Status == StatusBreached {
-				overall = StatusBreached
-				break
-			}
+			overall = moreSevereStatus(overall, state.Status)
+		}
+		if overall == StatusStable {
+			overall = StatusUnstable
 		}
 	}
 	return State{
@@ -77,6 +66,30 @@ func (m *Monitor) Evaluate(now time.Time) State {
 		EvaluatedAt:     now,
 		RequiredStable:  required,
 		RequiredSignals: m.config.GroupPolicy.TotalSignals,
+	}
+}
+
+func moreSevereStatus(current, next StabilityStatus) StabilityStatus {
+	if statusSeverity(next) > statusSeverity(current) {
+		return next
+	}
+	return current
+}
+
+func statusSeverity(status StabilityStatus) int {
+	switch status {
+	case StatusStable:
+		return 0
+	case StatusApproaching:
+		return 1
+	case StatusUnstable:
+		return 2
+	case StatusInsufficientHistory:
+		return 3
+	case StatusBreached:
+		return 4
+	default:
+		return 2
 	}
 }
 
