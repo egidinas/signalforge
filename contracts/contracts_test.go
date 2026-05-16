@@ -107,3 +107,58 @@ func TestTelecommandIdempotencyKeyPreservesExplicitKey(t *testing.T) {
 		t.Fatalf("idempotency key = %q", tc.IdempotencyKey)
 	}
 }
+
+func TestBuildSourceDiscoveryTreeReusesNestedBranches(t *testing.T) {
+	sources := []Source{
+		{
+			ID:    "stream-a",
+			Label: "Stream A",
+			DiscoveryPath: SourceDiscoveryPath{
+				Node:      "gateway",
+				Device:    "tvac",
+				Subsystem: "pressure",
+				Stream:    "a",
+			},
+		},
+		{
+			ID:    "stream-b",
+			Label: "Stream B",
+			DiscoveryPath: SourceDiscoveryPath{
+				Node:      "gateway",
+				Device:    "tvac",
+				Subsystem: "pressure",
+				Stream:    "b",
+			},
+		},
+		{
+			ID:    "stream-c",
+			Label: "Stream C",
+			DiscoveryPath: SourceDiscoveryPath{
+				Node:      "gateway",
+				Device:    "thermal",
+				Subsystem: "air",
+				Stream:    "c",
+			},
+		},
+	}
+
+	tree := BuildSourceDiscoveryTree(sources, SourceDiscoveryTreeOptions{})
+
+	if len(tree) != 1 {
+		t.Fatalf("nodes = %d, want 1: %#v", len(tree), tree)
+	}
+	if len(tree[0].Children) != 2 {
+		t.Fatalf("devices = %d, want 2: %#v", len(tree[0].Children), tree[0].Children)
+	}
+	tvac := tree[0].Children[0]
+	if tvac.ID != "tvac" || len(tvac.Children) != 1 {
+		t.Fatalf("tvac branch = %#v", tvac)
+	}
+	pressure := tvac.Children[0]
+	if pressure.ID != "pressure" || len(pressure.Children) != 2 {
+		t.Fatalf("pressure branch = %#v", pressure)
+	}
+	if pressure.Children[0].SourceID != "stream-a" || pressure.Children[1].SourceID != "stream-b" {
+		t.Fatalf("pressure streams not stable: %#v", pressure.Children)
+	}
+}

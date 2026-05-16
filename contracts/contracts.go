@@ -136,6 +136,8 @@ func BuildSourceDiscoveryTree(sources []Source, options SourceDiscoveryTreeOptio
 	}
 
 	nodeIndex := map[string]int{}
+	deviceIndexes := map[string]map[string]int{}
+	subsystemIndexes := map[string]map[string]int{}
 	tree := []SourceDiscoveryNode{}
 	for _, source := range sources {
 		path := source.DiscoveryPath
@@ -144,15 +146,9 @@ func BuildSourceDiscoveryTree(sources []Source, options SourceDiscoveryTreeOptio
 		}
 
 		node := sourceDiscoveryGetOrCreate(&tree, nodeIndex, path.Node, options.NodeLabeler(path.Node), "node")
-		deviceIndex := map[string]int{}
-		for i := range node.Children {
-			deviceIndex[node.Children[i].ID] = i
-		}
+		deviceIndex := sourceDiscoveryChildIndex(deviceIndexes, path.Node)
 		device := sourceDiscoveryGetOrCreate(&node.Children, deviceIndex, path.Device, options.DeviceLabeler(path.Device), "device")
-		subsystemIndex := map[string]int{}
-		for i := range device.Children {
-			subsystemIndex[device.Children[i].ID] = i
-		}
+		subsystemIndex := sourceDiscoveryChildIndex(subsystemIndexes, path.Node+"\x00"+path.Device)
 		subsystem := sourceDiscoveryGetOrCreate(&device.Children, subsystemIndex, path.Subsystem, options.SubsystemLabeler(path.Subsystem), "subsystem")
 		subsystem.Children = append(subsystem.Children, SourceDiscoveryNode{
 			ID:       path.Stream,
@@ -162,6 +158,15 @@ func BuildSourceDiscoveryTree(sources []Source, options SourceDiscoveryTreeOptio
 		})
 	}
 	return tree
+}
+
+func sourceDiscoveryChildIndex(indexes map[string]map[string]int, key string) map[string]int {
+	index := indexes[key]
+	if index == nil {
+		index = map[string]int{}
+		indexes[key] = index
+	}
+	return index
 }
 
 func sourceDiscoveryGetOrCreate(nodes *[]SourceDiscoveryNode, index map[string]int, id, label, kind string) *SourceDiscoveryNode {
