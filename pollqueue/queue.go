@@ -9,6 +9,10 @@ const (
 	// StatusNotSampled marks values that are known to the queue but have not
 	// returned from the poll loop yet.
 	StatusNotSampled = "not_sampled"
+
+	// MaxManualBurst is the number of front-lane emissions allowed before a
+	// normal item must be considered when normal work is queued.
+	MaxManualBurst = 1
 )
 
 // KeyFunc returns the stable identity used for deduplication and latest-value
@@ -35,6 +39,7 @@ type Queue[T any, V any] struct {
 	normalSet map[string]struct{}
 	frontSet  map[string]struct{}
 	latest    map[string]Result[T, V]
+	manualRun int
 }
 
 // New creates a queue and seeds Latest for all initial items.
@@ -78,8 +83,9 @@ func (q *Queue[T, V]) EnqueueFront(item T) {
 	q.front = append(q.front, item)
 }
 
-// NextChunk returns up to max items, draining front-lane requests before
-// rotating normal items. The same key is emitted at most once per chunk.
+// NextChunk returns up to max items, giving front-lane requests priority while
+// bounding consecutive manual emissions. The same key is emitted at most once
+// per chunk.
 func (q *Queue[T, V]) NextChunk(max int) []T {
 	if max <= 0 {
 		return nil
@@ -88,29 +94,23 @@ func (q *Queue[T, V]) NextChunk(max int) []T {
 	defer q.mu.Unlock()
 	out := make([]T, 0, max)
 	emitted := map[string]struct{}{}
-
-	for len(out) < max && len(q.front) > 0 {
-		item := q.front[0]
-		q.front = q.front[1:]
-		key := q.itemKey(item)
-		delete(q.frontSet, key)
-		if _, ok := emitted[key]; ok {
-			continue
-		}
-		emitted[key] = struct{}{}
-		out = append(out, item)
-	}
-
 	normalLimit := len(q.normal)
-	for normalTaken := 0; normalTaken < normalLimit && len(out) < max && len(q.normal) > 0; normalTaken++ {
-		item := q.normal[0]
-		q.normal = append(q.normal[1:], item)
-		key := q.itemKey(item)
-		if _, ok := emitted[key]; ok {
+	normalTaken := 0
+
+	for len(out) < max && (len(q.front) > 0 || (normalTaken < normalLimit && len(q.normal) > 0)) {
+		if q.shouldTakeFrontLocked(normalTaken, normalLimit) {
+			if q.emitFrontLocked(&out, emitted) {
+				q.manualRun++
+			}
 			continue
 		}
-		emitted[key] = struct{}{}
-		out = append(out, item)
+
+		if normalTaken < normalLimit && len(q.normal) > 0 {
+			normalTaken++
+			if q.emitNormalLocked(&out, emitted) {
+				q.manualRun = 0
+			}
+		}
 	}
 	return out
 }
@@ -149,4 +149,39 @@ func (q *Queue[T, V]) itemKey(item T) string {
 		panic("pollqueue: nil key function")
 	}
 	return q.key(item)
+}
+
+func (q *Queue[T, V]) shouldTakeFrontLocked(normalTaken, normalLimit int) bool {
+	if len(q.front) == 0 {
+		return false
+	}
+	if len(q.normal) == 0 || normalTaken >= normalLimit {
+		return true
+	}
+	return q.manualRun < MaxManualBurst
+}
+
+func (q *Queue[T, V]) emitFrontLocked(out *[]T, emitted map[string]struct{}) bool {
+	item := q.front[0]
+	q.front = q.front[1:]
+	key := q.itemKey(item)
+	delete(q.frontSet, key)
+	if _, ok := emitted[key]; ok {
+		return false
+	}
+	emitted[key] = struct{}{}
+	*out = append(*out, item)
+	return true
+}
+
+func (q *Queue[T, V]) emitNormalLocked(out *[]T, emitted map[string]struct{}) bool {
+	item := q.normal[0]
+	q.normal = append(q.normal[1:], item)
+	key := q.itemKey(item)
+	if _, ok := emitted[key]; ok {
+		return false
+	}
+	emitted[key] = struct{}{}
+	*out = append(*out, item)
+	return true
 }

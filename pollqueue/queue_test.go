@@ -44,6 +44,31 @@ func TestQueueManualPollGoesToFrontOnce(t *testing.T) {
 	}
 }
 
+func TestQueueSustainedManualPollsDoNotStarveNormalRotation(t *testing.T) {
+	normal := testItem{"normal"}
+	q := New[testItem, float64]([]testItem{normal}, testKey)
+
+	var got []string
+	for i := 0; i < 6; i++ {
+		q.EnqueueFront(testItem{Key: "manual-" + string(rune('a'+i))})
+		chunk := q.NextChunk(1)
+		if len(chunk) != 1 {
+			t.Fatalf("chunk %d length = %d, want 1", i, len(chunk))
+		}
+		got = append(got, chunk[0].Key)
+	}
+
+	normalCount := 0
+	for _, key := range got {
+		if key == normal.Key {
+			normalCount++
+		}
+	}
+	if normalCount == 0 {
+		t.Fatalf("normal item starved under sustained manual load: %#v", got)
+	}
+}
+
 func TestQueueDoesNotEmitDuplicateKeyInOneChunk(t *testing.T) {
 	item := testItem{"same"}
 	q := New[testItem, float64]([]testItem{item}, testKey)
