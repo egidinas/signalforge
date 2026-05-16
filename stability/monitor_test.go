@@ -139,6 +139,26 @@ func TestDwellTransition(t *testing.T) {
 	}
 }
 
+func TestEvaluateDwellGateUsesStateEvaluationTime(t *testing.T) {
+	start := time.Unix(1000, 0)
+	dwell := time.Minute
+	current := State{OverallStatus: StatusStable, EvaluatedAt: start}
+
+	state := EvaluateDwellGate(DwellGateState{}, current, dwell, BreachPolicy{PauseOnBreach: true})
+	if state.Satisfied || state.Status != StatusApproaching {
+		t.Fatalf("expected first evaluated state to approach dwell, got %+v", state)
+	}
+
+	current.EvaluatedAt = start.Add(dwell)
+	state = EvaluateDwellGate(state, current, dwell, BreachPolicy{PauseOnBreach: true})
+	if !state.Satisfied || state.Status != StatusStable {
+		t.Fatalf("expected dwell to be satisfied by state evaluation timestamps, got %+v", state)
+	}
+	if !state.LastEvaluation.Equal(current.EvaluatedAt) {
+		t.Fatalf("last evaluation = %s, want %s", state.LastEvaluation, current.EvaluatedAt)
+	}
+}
+
 func TestValidateConfig(t *testing.T) {
 	errs := ValidateConfig(Config{})
 	if len(errs) == 0 {

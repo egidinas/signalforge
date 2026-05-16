@@ -292,7 +292,7 @@ func DwellTransition(previous DwellGateState, stable bool, now time.Time, dwell 
 
 func EvaluateDwellGate(state DwellGateState, current State, dwell time.Duration, policy BreachPolicy) DwellGateState {
 	stable := current.OverallStatus == StatusStable
-	return DwellTransition(state, stable, wallClockNow(), dwell, policy)
+	return DwellTransition(state, stable, current.EvaluatedAt, dwell, policy)
 }
 
 func ValidateConfig(config Config) []ValidationError {
