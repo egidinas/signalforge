@@ -71,7 +71,7 @@ func isUnsafeUserPath(userPath string) bool {
 }
 
 func looksLikeWindowsAbsolute(userPath string) bool {
-	if strings.HasPrefix(userPath, `\\`) || strings.HasPrefix(userPath, `//`) {
+	if strings.HasPrefix(userPath, `\`) || strings.HasPrefix(userPath, `//`) {
 		return true
 	}
 	if len(userPath) >= 3 && userPath[1] == ':' && (userPath[2] == '\\' || userPath[2] == '/') {

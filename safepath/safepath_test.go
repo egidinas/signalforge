@@ -36,6 +36,7 @@ func TestResolveUnderRootRejectsUnsafePaths(t *testing.T) {
 		"fixtures/../example.json",
 		"fixtures/../../example.json",
 		`C:\tmp\example.json`,
+		`\Windows\System32\drivers\etc\hosts`,
 		`\\server\share\example.json`,
 		"fixtures/\x00evil.json",
 		"sub\x00/../etc/passwd",
