@@ -47,8 +47,11 @@ func (b *Buffer[T]) Push(item T) bool {
 	if size <= 0 || size > b.maxBytes {
 		return false
 	}
-	for b.len > 0 && b.bytes+size > b.maxBytes {
+	for b.len > 0 && !b.fitsLocked(size) {
 		b.evictOldestLocked()
+	}
+	if !b.fitsLocked(size) {
+		return false
 	}
 	b.ensureCapacityLocked(b.len + 1)
 	tail := (b.head + b.len) % cap(b.entries)
@@ -128,6 +131,10 @@ func (b *Buffer[T]) evictOldestLocked() {
 		b.head = 0
 		b.entries = b.entries[:0]
 	}
+}
+
+func (b *Buffer[T]) fitsLocked(size int) bool {
+	return b.bytes <= b.maxBytes && size <= b.maxBytes-b.bytes
 }
 
 func (b *Buffer[T]) ensureCapacityLocked(minCapacity int) {

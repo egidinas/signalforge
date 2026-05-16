@@ -9,6 +9,11 @@ type record struct {
 	Name string
 }
 
+type sizedRecord struct {
+	Name string
+	Size int
+}
+
 func recordSize(r record) int {
 	return 10 + len(r.Name)
 }
@@ -115,6 +120,28 @@ func TestBufferByteAccountingAndOversizeDrop(t *testing.T) {
 	}
 	if got := buf.Snapshot(); !reflect.DeepEqual(got, []record{first, second}) {
 		t.Fatalf("Snapshot after oversize = %#v", got)
+	}
+}
+
+func TestBufferByteBudgetDoesNotOverflow(t *testing.T) {
+	maxInt := int(^uint(0) >> 1)
+	largeSize := maxInt/2 + 1
+	buf := New[sizedRecord](maxInt, func(r sizedRecord) int { return r.Size })
+
+	if !buf.Push(sizedRecord{Name: "first", Size: largeSize}) {
+		t.Fatal("expected first large record to fit")
+	}
+	if !buf.Push(sizedRecord{Name: "second", Size: largeSize}) {
+		t.Fatal("expected second large record to fit after eviction")
+	}
+	if got := buf.Len(); got != 1 {
+		t.Fatalf("Len = %d, want 1", got)
+	}
+	if got := buf.Bytes(); got != largeSize {
+		t.Fatalf("Bytes = %d, want %d", got, largeSize)
+	}
+	if got := buf.Snapshot(); !reflect.DeepEqual(got, []sizedRecord{{Name: "second", Size: largeSize}}) {
+		t.Fatalf("Snapshot = %#v", got)
 	}
 }
 
