@@ -72,6 +72,33 @@ func TestBufferDrainResetsBuffer(t *testing.T) {
 	}
 }
 
+func TestBufferDrainClearsRetainedEntries(t *testing.T) {
+	type payload struct {
+		Name string
+	}
+	size := func(*payload) int { return 1 }
+	buf := New[*payload](4, size)
+
+	for _, name := range []string{"a", "b", "c", "d", "e"} {
+		if !buf.Push(&payload{Name: name}) {
+			t.Fatalf("Push rejected %q", name)
+		}
+	}
+	if buf.head == 0 {
+		t.Fatal("expected wrapped head after eviction")
+	}
+
+	drained := buf.Drain()
+	if len(drained) != 4 {
+		t.Fatalf("Drain returned %d payloads, want 4", len(drained))
+	}
+	for i, entry := range buf.entries[:cap(buf.entries)] {
+		if entry.item != nil || entry.size != 0 {
+			t.Fatalf("retained entry %d = %#v, want zero value", i, entry)
+		}
+	}
+}
+
 func TestBufferByteAccountingAndOversizeDrop(t *testing.T) {
 	first := record{"alpha"}
 	second := record{"beta"}

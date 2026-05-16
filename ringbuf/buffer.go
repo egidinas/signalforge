@@ -70,6 +70,11 @@ func (b *Buffer[T]) Drain() []T {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	out := b.snapshotLocked()
+	for i := 0; i < b.len; i++ {
+		idx := (b.head + i) % cap(b.entries)
+		var zero entry[T]
+		b.entries[idx] = zero
+	}
 	b.entries = b.entries[:0]
 	b.head = 0
 	b.len = 0
