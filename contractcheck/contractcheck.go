@@ -77,7 +77,7 @@ func RejectControlChars(field, value string) error {
 // HasControlChars checks for control characters in a string, excluding common whitespace.
 func HasControlChars(value string) bool {
 	for _, r := range value {
-		if r < 32 && r != '\n' && r != '\t' && r != '\r' {
+		if unicode.IsControl(r) && r != '\n' && r != '\t' && r != '\r' {
 			return true
 		}
 	}

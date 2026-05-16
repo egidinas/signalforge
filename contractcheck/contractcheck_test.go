@@ -91,3 +91,16 @@ func TestRejectControlChars(t *testing.T) {
 		}
 	}
 }
+
+func TestHasControlChars(t *testing.T) {
+	for _, clean := range []string{"valid-id_123", "line\nwith\ttabs\rand carriage returns"} {
+		if contractcheck.HasControlChars(clean) {
+			t.Fatalf("clean string %q: expected no disallowed control chars", clean)
+		}
+	}
+	for _, bad := range []string{"\x00", "\x7f", "\u0085"} {
+		if !contractcheck.HasControlChars(bad) {
+			t.Fatalf("control char %q: expected detection", bad)
+		}
+	}
+}
