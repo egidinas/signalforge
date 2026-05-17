@@ -114,6 +114,7 @@ export type TileSeries = {
   id: string;
   label: string;
   role: string;
+  color?: string;
   unit?: string;
   units?: string;
   kind?: string;
@@ -133,13 +134,16 @@ export type TileDiagnostics = {
   level?: string;
   requested_t0?: string;
   requested_t1?: string;
-  raw_point_count: number;
-  point_count: number;
+  raw_point_count?: number;
+  point_count?: number;
   decimated?: boolean;
-  decimation: string;
+  decimation?: string;
   time_span_ms?: number;
-  freshness_ms: number;
+  freshness_ms?: number;
   source_quality?: string;
+  status?: string;
+  renderer?: string;
+  series_count?: number;
 };
 
 export type TileProvenance = {
@@ -202,13 +206,20 @@ export type TileEvent = {
 };
 
 export type GraphTile = {
-  schema_version: number;
+  schema_version: number | string;
   id: string;
+  tile_id?: string;
+  kind?: string;
+  title?: string;
+  renderer?: string;
+  generated_at?: string;
   campaign_id?: string;
   card_id: string;
   level: string;
   t0: string;
   t1: string;
+  time_window_ms?: number;
+  axes?: unknown[];
   series: TileSeries[];
   bands: TileBand[];
   markers: GraphMarker[];

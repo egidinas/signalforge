@@ -30,7 +30,79 @@ export { TileClient, pickTileLevel } from "./tiles/TileClient";
 export type { TileLevel } from "./tiles/TileClient";
 
 // Render utilities
-export { uplotData, drawTileOverlays } from "./render/uPlotAdapter";
+export {
+  uplotData,
+  drawTileOverlays,
+  seriesDrawOrder,
+  lineWidthFor,
+  sharedTimeGrid,
+  buildScales,
+  buildAxes,
+  paddedRange,
+  logScale,
+  logSplits,
+  ySplits,
+  axisLabel,
+  scaleForSeries,
+  stateBlocks,
+  inTimeRange,
+  renderKindFor,
+} from "./render/uPlotAdapter";
+export {
+  clampRange,
+  timeTicks,
+  chooseTickStep,
+  tickLabel,
+  TimeAxisTrack,
+  HeroTopTimeAxis,
+  SharedTimeAxis,
+} from "./render/timeAxis";
+export {
+  roleColors,
+  signalColors,
+  distinctivePalette,
+  palette,
+  paletteForID,
+  colorForSignal,
+  semanticColor,
+  signalPriority,
+  orderLegendSignals,
+  graphCardPriority,
+  graphSectionPriority,
+  graphSectionRank,
+  graphCardRank,
+  cardPriority,
+  tileCardPriority,
+  eventColor,
+  blockLabel,
+} from "./render/visualPolicy";
+export {
+  viewportSeries,
+  commandCenterGapBreaks,
+  resampleSeries,
+  decimationValue,
+  commandCenterProjectedSeries,
+  displayValue,
+  lttb,
+  commandCenterTraceGapMs,
+} from "./render/decimation";
+export {
+  markerColor,
+  operatorMarkerLines,
+  formatMarkerDateTime,
+  placeMarkerLabel,
+  rectanglesOverlap,
+  fitCanvasText,
+  shortGateLabel,
+  legendReadouts,
+  clampTime,
+  rawValueAt,
+  stateAt,
+  formatLegendValue,
+  formatScientific,
+  formatPressure,
+  unitForAxis,
+} from "./render/markers";
 
 // React components
 export { SignalDictionary } from "./dict/SignalDictionary";

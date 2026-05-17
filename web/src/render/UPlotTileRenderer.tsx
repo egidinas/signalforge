@@ -10,6 +10,8 @@ export type UPlotTileRendererProps = {
   currentTimeMs?: number;
   hoverTimeMs?: number;
   className?: string;
+  dataGraphRenderer?: string;
+  syncKey?: string;
 };
 
 export function UPlotTileRenderer({
@@ -19,6 +21,8 @@ export function UPlotTileRenderer({
   currentTimeMs,
   hoverTimeMs,
   className,
+  dataGraphRenderer,
+  syncKey = "sf-wall",
 }: UPlotTileRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const plotRef = useRef<uPlot | null>(null);
@@ -49,14 +53,14 @@ export function UPlotTileRenderer({
       scales: built.scales,
       axes: built.axes,
       hooks,
-      cursor: { sync: { key: "sf-wall" } },
+      cursor: { sync: { key: syncKey } },
     };
 
     if (plotRef.current) {
       plotRef.current.destroy();
     }
     plotRef.current = new uPlot(opts, built.data, containerRef.current);
-  }, [tile, heroGraph, height, currentTimeMs, hoverTimeMs]);
+  }, [tile, heroGraph, height, currentTimeMs, hoverTimeMs, syncKey]);
 
   useEffect(() => {
     build();
@@ -73,5 +77,13 @@ export function UPlotTileRenderer({
     };
   }, [build, height]);
 
-  return <div ref={containerRef} className={className} style={{ width: "100%" }} />;
+  return (
+    <div
+      ref={containerRef}
+      className={className}
+      data-graph-renderer={dataGraphRenderer ?? tile.renderer ?? "signalforge.tile.uplot"}
+      data-graph-tile={tile.tile_id ?? tile.id}
+      style={{ width: "100%" }}
+    />
+  );
 }

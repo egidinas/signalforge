@@ -100,8 +100,9 @@ export function paletteForID(id: string, fallbackIndex: number) {
   return distinctivePalette[Math.abs(hash) % distinctivePalette.length];
 }
 
-export function colorForSignal(signal: Pick<TileSeries, "id" | "role" | "render_kind" | "kind"> | { id: string; role: string; kind?: string }, index = 0) {
+export function colorForSignal(signal: Pick<TileSeries, "id" | "role" | "render_kind" | "kind" | "color"> | { id: string; role: string; kind?: string; color?: string }, index = 0) {
   const kind = "kind" in signal ? signal.kind : ("render_kind" in signal ? signal.render_kind : undefined);
+  if (signal.color && !signal.color.includes("var(")) return signal.color;
   if (signalColors[signal.id]) return signalColors[signal.id];
   const semantic = semanticColor(signal.id);
   if (semantic) return semantic;

@@ -1,30 +1,25 @@
 module github.com/egidinas/signalforge
 
-go 1.24.9
+go 1.22.7
 
 require (
-	github.com/apache/arrow-go/v18 v18.5.2
-	github.com/parquet-go/parquet-go v0.29.0
+	github.com/apache/arrow-go/v18 v18.1.0
+	github.com/parquet-go/parquet-go v0.25.1
 )
 
 require (
-	github.com/andybalholm/brotli v1.2.1 // indirect
-	github.com/goccy/go-json v0.10.6 // indirect
-	github.com/google/flatbuffers v25.12.19+incompatible // indirect
+	github.com/andybalholm/brotli v1.1.1 // indirect
+	github.com/goccy/go-json v0.10.4 // indirect
+	github.com/google/flatbuffers v24.12.23+incompatible // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/klauspost/compress v1.18.5 // indirect
-	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
-	github.com/parquet-go/bitpack v1.0.0 // indirect
-	github.com/parquet-go/jsonlite v1.0.0 // indirect
-	github.com/pierrec/lz4/v4 v4.1.26 // indirect
-	github.com/twpayne/go-geom v1.6.1 // indirect
-	github.com/zeebo/xxh3 v1.1.0 // indirect
-	golang.org/x/exp v0.0.0-20260112195511-716be5621a96 // indirect
-	golang.org/x/mod v0.33.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260209163413-e7419c687ee4 // indirect
-	golang.org/x/tools v0.42.0 // indirect
+	github.com/klauspost/compress v1.17.11 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.9 // indirect
+	github.com/pierrec/lz4/v4 v4.1.22 // indirect
+	github.com/zeebo/xxh3 v1.0.2 // indirect
+	golang.org/x/exp v0.0.0-20240909161429-701f63a606c0 // indirect
+	golang.org/x/mod v0.22.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/tools v0.29.0 // indirect
 	golang.org/x/xerrors v0.0.0-20240903120638-7835f813f4da // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
 )

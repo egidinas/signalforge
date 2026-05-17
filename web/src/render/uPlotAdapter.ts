@@ -91,6 +91,10 @@ export function buildScales(scaleKeys: Set<string>): Record<string, uPlot.Scale>
     else if (key === "pressure_bar") scales[key] = { range: paddedRange(0.08, [0, 12]) };
     else if (key === "percent") scales[key] = { range: (_u, _min, _max) => [0, 100] };
     else if (key === "heat_flux_w") scales[key] = { range: paddedRange(8, [-45, 45]) };
+    else if (key === "current_a") scales[key] = { range: paddedRange(0.1) };
+    else if (key === "voltage_v") scales[key] = { range: paddedRange(0.5) };
+    else if (key === "seconds") scales[key] = { range: paddedRange(1) };
+    else if (key === "generic_numeric") scales[key] = { range: paddedRange(1) };
     else scales[key] = {};
   });
   return scales;
@@ -100,23 +104,22 @@ export function buildAxes(scaleKeys: Set<string>, tile: GraphTile): uPlot.Axis[]
   const leftAxisSize = 64;
   const rightAxisSize = 64;
   const axes: uPlot.Axis[] = [{ show: false }];
-  const primary = scaleKeys.has("temperature_c")
-    ? "temperature_c"
-    : scaleKeys.has("power_w")
-      ? "power_w"
-      : scaleKeys.has("heat_flux_w")
-        ? "heat_flux_w"
-        : scaleKeys.has("bus_ms")
-          ? "bus_ms"
-          : scaleKeys.has("counter")
-            ? "counter"
-            : scaleKeys.has("pressure_log")
-              ? "pressure_log"
-              : scaleKeys.has("pressure_rate_log")
-                ? "pressure_rate_log"
-                : scaleKeys.has("pressure_bar")
-                  ? "pressure_bar"
-              : "percent";
+  const primaryCandidates = [
+    "temperature_c",
+    "power_w",
+    "heat_flux_w",
+    "current_a",
+    "voltage_v",
+    "seconds",
+    "bus_ms",
+    "counter",
+    "pressure_log",
+    "pressure_rate_log",
+    "pressure_bar",
+    "percent",
+    "generic_numeric",
+  ];
+  const primary = primaryCandidates.find((candidate) => scaleKeys.has(candidate)) ?? "generic_numeric";
   axes.push({
     show: true,
     scale: primary,
@@ -211,9 +214,13 @@ export function axisLabel(scale: string, _tile: GraphTile) {
   if (scale === "pressure_bar") return "bar";
   if (scale === "heat_flux_w") return "W";
   if (scale === "power_w") return "W";
+  if (scale === "current_a") return "A";
+  if (scale === "voltage_v") return "V";
+  if (scale === "seconds") return "s";
   if (scale === "bus_ms") return "ms";
   if (scale === "counter") return "count";
   if (scale === "percent") return "%";
+  if (scale === "generic_numeric") return "value";
   return scale;
 }
 
@@ -223,10 +230,23 @@ export function scaleForSeries(_tile: GraphTile, series: TileSeries): string {
   if (series.axis_id === "pressure_bar") return "pressure_bar";
   if (series.axis_id === "power_w") return "power_w";
   if (series.axis_id === "heat_flux_w") return "heat_flux_w";
+  if (series.axis_id === "current_a") return "current_a";
+  if (series.axis_id === "voltage_v") return "voltage_v";
+  if (series.axis_id === "seconds") return "seconds";
   if (series.axis_id === "counter") return "counter";
   if (series.axis_id === "bus_ms") return "bus_ms";
   if (series.axis_id === "percent") return "percent";
-  return "temperature_c";
+  if (series.axis_id === "generic_numeric") return "generic_numeric";
+  const unit = (series.unit ?? series.units ?? "").trim().toLowerCase();
+  if (unit === "a" || unit === "amp" || unit === "amps") return "current_a";
+  if (unit === "v" || unit === "volt" || unit === "volts") return "voltage_v";
+  if (unit === "s" || unit === "sec" || unit === "secs" || unit === "second" || unit === "seconds") return "seconds";
+  if (unit === "ms" || unit === "millisecond" || unit === "milliseconds") return "bus_ms";
+  if (unit === "w" || unit === "watt" || unit === "watts") return "power_w";
+  if (unit === "%" || unit === "percent") return "percent";
+  if (unit.includes("deg") || unit === "c" || unit === "°c") return "temperature_c";
+  if (series.role === "counter" || series.kind === "counter") return "counter";
+  return "generic_numeric";
 }
 
 export function stateBlocks(series: TileSeries, start: number, span: number) {
