@@ -49,6 +49,17 @@ export {
   renderKindFor,
 } from "./render/uPlotAdapter";
 export {
+  CANONICAL_TILE_RENDERER,
+  SERIES_ROLE_META,
+  seriesRoleMeta,
+  seriesRoleColor,
+  measuredElementWidth,
+  emptyGraphTile,
+  renderSeriesFromGraphTile,
+  normalizeGraphTile,
+} from "./render/tileModel";
+export type { SeriesRoleMeta, RenderedTileSeries } from "./render/tileModel";
+export {
   clampRange,
   timeTicks,
   chooseTickStep,

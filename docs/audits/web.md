@@ -9,6 +9,8 @@ primitives:
 - wall management state and controls;
 - graph-tile client, hooks, decimation, overlays, markers, and time-axis
   helpers;
+- graph-tile normalization, rendered-series ordering, and canonical renderer
+  constants for downstream consumers;
 - uPlot-backed tile rendering;
 - standalone demo used only as a render and packaging proof.
 
