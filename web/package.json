@@ -16,10 +16,14 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/signalforge-web.es.js"
+    },
+    "./styles.css": {
+      "default": "./src/styles.css"
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "src/styles.css"
   ],
   "scripts": {
     "build": "tsc -b && vite build",

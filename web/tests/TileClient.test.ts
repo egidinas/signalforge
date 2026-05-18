@@ -1,4 +1,4 @@
-import { pickTileLevel, TileClient } from "../src/tiles/TileClient";
+import { DEFAULT_TILE_LEVELS, pickTileLevel, TileClient } from "../src/tiles/TileClient";
 import type { TileAdapter } from "../src/types";
 import type { GraphTile } from "../src/types";
 
@@ -7,13 +7,27 @@ describe("pickTileLevel", () => {
     expect(pickTileLevel(0)).toBe("live");
     expect(pickTileLevel(5 * 60 * 1000)).toBe("live");
   });
-  it("returns minute for 5min–6h", () => {
+  it("returns minute for 5min–6min", () => {
     expect(pickTileLevel(5 * 60 * 1000 + 1)).toBe("minute");
-    expect(pickTileLevel(6 * 60 * 60 * 1000)).toBe("minute");
+    expect(pickTileLevel(6 * 60 * 1000)).toBe("minute");
   });
-  it("returns hour for >6h", () => {
-    expect(pickTileLevel(6 * 60 * 60 * 1000 + 1)).toBe("hour");
-    expect(pickTileLevel(24 * 60 * 60 * 1000)).toBe("hour");
+  it("returns hour for 6min–60min", () => {
+    expect(pickTileLevel(6 * 60 * 1000 + 1)).toBe("hour");
+    expect(pickTileLevel(60 * 60 * 1000)).toBe("hour");
+  });
+  it("returns three_hour for 60min–3h", () => {
+    expect(pickTileLevel(60 * 60 * 1000 + 1)).toBe("three_hour");
+    expect(pickTileLevel(3 * 60 * 60 * 1000)).toBe("three_hour");
+  });
+  it("returns day for 3h–24h", () => {
+    expect(pickTileLevel(3 * 60 * 60 * 1000 + 1)).toBe("day");
+    expect(pickTileLevel(24 * 60 * 60 * 1000)).toBe("day");
+  });
+  it("returns three_day for >24h", () => {
+    expect(pickTileLevel(24 * 60 * 60 * 1000 + 1)).toBe("three_day");
+  });
+  it("exports the default tile ladder", () => {
+    expect(DEFAULT_TILE_LEVELS.map((level) => level.level)).toEqual(["live", "minute", "hour", "three_hour", "day", "three_day"]);
   });
 });
 

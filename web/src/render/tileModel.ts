@@ -44,6 +44,11 @@ export type RenderedTileSeries = {
   };
 };
 
+export type MeasuredElementSize = {
+  width: number;
+  height: number;
+};
+
 type LooseRecord = Record<string, unknown>;
 type LooseTileSeries = TileSeries & LooseRecord;
 
@@ -60,10 +65,18 @@ export function seriesRoleColor(role?: string, fallback = "var(--series-actual)"
   return getComputedStyle(document.documentElement).getPropertyValue(css).trim() || fallback;
 }
 
-export function measuredElementWidth(el: Element | null | undefined) {
-  if (!el) return 0;
+export function measuredElementSize(el: Element | null | undefined): MeasuredElementSize {
+  if (!el) return { width: 0, height: 0 };
   const rect = typeof el.getBoundingClientRect === "function" ? el.getBoundingClientRect() : null;
-  return Math.floor((rect && rect.width) || (el as HTMLElement).clientWidth || 0);
+  const html = el as HTMLElement;
+  return {
+    width: Math.floor((rect && rect.width) || html.clientWidth || html.offsetWidth || 0),
+    height: Math.floor((rect && rect.height) || html.clientHeight || html.offsetHeight || 0),
+  };
+}
+
+export function measuredElementWidth(el: Element | null | undefined) {
+  return measuredElementSize(el).width;
 }
 
 export function emptyGraphTile(opts: LooseRecord = {}): GraphTile {

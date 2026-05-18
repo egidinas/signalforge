@@ -11,6 +11,11 @@ export type {
   GraphWallSignal, GraphSection, GraphTileCardRef,
   // Wall / assignment
   WallConfig, Assignment,
+  // Public semantic contracts
+  LifecycleState, LifecycleStep, WriteLifecycleContract,
+  SemanticValueQuality, SemanticValueCounterpart, SemanticValueHoverMeta,
+  RouteState, RouteCandidate, RouteRedundancyContract,
+  JsonSignalCatalogue, JsonSignalCatalogueEntry,
   // Signal catalogue
   SemanticSignal, Channel,
   // Adapter interfaces
@@ -20,14 +25,16 @@ export type {
 // Hooks
 export { loadAssignments, saveAssignments, makeAssignment, useAssignments } from "./dict/useAssignments";
 export type { AssignmentsHandle } from "./dict/useAssignments";
+export { normalizeJsonSignalCatalogue } from "./catalogue/json";
+export type { JsonSignalCatalogueInput } from "./catalogue/json";
 export { loadWalls, saveWalls, useWalls } from "./walls/useWalls";
 export type { WallsHandle } from "./walls/useWalls";
 export { useTileSeries } from "./tiles/useTileSeries";
 export type { TileState } from "./tiles/useTileSeries";
 
 // Tile client
-export { TileClient, pickTileLevel } from "./tiles/TileClient";
-export type { TileLevel } from "./tiles/TileClient";
+export { DEFAULT_TILE_LEVELS, TileClient, pickTileLevel } from "./tiles/TileClient";
+export type { TileLevel, TileLevelSpec } from "./tiles/TileClient";
 
 // Render utilities
 export {
@@ -53,12 +60,13 @@ export {
   SERIES_ROLE_META,
   seriesRoleMeta,
   seriesRoleColor,
+  measuredElementSize,
   measuredElementWidth,
   emptyGraphTile,
   renderSeriesFromGraphTile,
   normalizeGraphTile,
 } from "./render/tileModel";
-export type { SeriesRoleMeta, RenderedTileSeries } from "./render/tileModel";
+export type { SeriesRoleMeta, RenderedTileSeries, MeasuredElementSize } from "./render/tileModel";
 export {
   clampRange,
   timeTicks,
@@ -118,6 +126,9 @@ export {
   formatPressure,
   unitForAxis,
 } from "./render/markers";
+
+// UI fundamentals
+export { SF_UI_CLASSNAMES, SF_UI_TOKENS } from "./ui/fundamentals";
 
 // React components
 export { SignalDictionary } from "./dict/SignalDictionary";

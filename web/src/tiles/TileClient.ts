@@ -1,11 +1,29 @@
 import type { GraphTile, TileAdapter } from "../types";
 
-export type TileLevel = "live" | "minute" | "hour";
+export type TileLevel = "live" | "minute" | "hour" | "three_hour" | "day" | "three_day";
+
+export type TileLevelSpec = {
+  level: TileLevel;
+  label: string;
+  timeWindowMs: number;
+};
+
+export const DEFAULT_TILE_LEVELS: TileLevelSpec[] = [
+  { level: "live", label: "live 90s", timeWindowMs: 90_000 },
+  { level: "minute", label: "history 6m", timeWindowMs: 6 * 60_000 },
+  { level: "hour", label: "history 60m", timeWindowMs: 60 * 60_000 },
+  { level: "three_hour", label: "history 3h", timeWindowMs: 3 * 60 * 60_000 },
+  { level: "day", label: "history 24h", timeWindowMs: 24 * 60 * 60_000 },
+  { level: "three_day", label: "history 3d", timeWindowMs: 3 * 24 * 60 * 60_000 },
+];
 
 export function pickTileLevel(timeWindowMs: number): TileLevel {
   if (timeWindowMs <= 5 * 60_000) return "live";
-  if (timeWindowMs <= 6 * 60 * 60_000) return "minute";
-  return "hour";
+  if (timeWindowMs <= 6 * 60_000) return "minute";
+  if (timeWindowMs <= 60 * 60_000) return "hour";
+  if (timeWindowMs <= 3 * 60 * 60_000) return "three_hour";
+  if (timeWindowMs <= 24 * 60 * 60_000) return "day";
+  return "three_day";
 }
 
 type CacheEntry = { tile: GraphTile; fetchedAt: number };

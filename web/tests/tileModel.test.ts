@@ -1,5 +1,7 @@
 import {
   CANONICAL_TILE_RENDERER,
+  measuredElementSize,
+  measuredElementWidth,
   normalizeGraphTile,
   renderSeriesFromGraphTile,
   seriesRoleMeta,
@@ -282,5 +284,27 @@ describe("tileModel", () => {
     });
 
     expect(tile.series[0].axis_id).toBe("counter");
+  });
+
+  it("measures graph host boxes from DOM rects and layout fallbacks", () => {
+    const rectEl = {
+      getBoundingClientRect: () => ({ width: 512.8, height: 240.3 }),
+      clientWidth: 300,
+      clientHeight: 120,
+      offsetWidth: 300,
+      offsetHeight: 120,
+    } as unknown as Element;
+    const fallbackEl = {
+      getBoundingClientRect: () => ({ width: 0, height: 0 }),
+      clientWidth: 384,
+      clientHeight: 216,
+      offsetWidth: 400,
+      offsetHeight: 240,
+    } as unknown as Element;
+
+    expect(measuredElementSize(rectEl)).toEqual({ width: 512, height: 240 });
+    expect(measuredElementSize(fallbackEl)).toEqual({ width: 384, height: 216 });
+    expect(measuredElementWidth(fallbackEl)).toBe(384);
+    expect(measuredElementSize(null)).toEqual({ width: 0, height: 0 });
   });
 });

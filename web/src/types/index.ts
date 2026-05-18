@@ -94,6 +94,127 @@ export type GraphTileCardRef = {
   include_markers?: boolean; signals: GraphWallSignal[]; evidence_links?: unknown[];
 };
 
+// ---- Public semantic contracts ----
+
+export type LifecycleState = "current" | "staged" | "prospective" | "submitted" | "confirmed" | "failed";
+
+export type LifecycleStep = {
+  state: LifecycleState;
+  label?: string;
+  value?: string | number | boolean | null;
+  unit?: string;
+  timestamp?: string;
+  source?: string;
+  evidence_ref?: string;
+  note?: string;
+  safe_to_apply?: boolean;
+  counterpart_ids?: string[];
+  meta?: Record<string, unknown>;
+};
+
+export type WriteLifecycleContract = {
+  subject_id: string;
+  subject_label?: string;
+  target_id?: string;
+  current?: LifecycleStep;
+  staged?: LifecycleStep;
+  prospective?: LifecycleStep;
+  submission?: LifecycleStep;
+  confirmed?: LifecycleStep;
+  failed?: LifecycleStep & { error?: string; retryable?: boolean };
+  steps?: LifecycleStep[];
+  lease_token?: string;
+  request_id?: string;
+  transport?: string;
+  endpoint?: string;
+  safety_note?: string;
+  evidence_ref?: string;
+  counterpart_ids?: string[];
+  meta?: Record<string, unknown>;
+};
+
+export type SemanticValueQuality = "unknown" | "good" | "stale" | "degraded" | "invalid" | "unavailable";
+
+export type SemanticValueCounterpart = {
+  id: string;
+  label?: string;
+  role?: string;
+  value?: string | number | boolean | null;
+  unit?: string;
+  quality?: SemanticValueQuality;
+  source?: string;
+};
+
+export type SemanticValueHoverMeta = {
+  id?: string;
+  label: string;
+  value?: string | number | boolean | null;
+  unit?: string;
+  quality?: SemanticValueQuality;
+  timestamp?: string;
+  source?: string;
+  evidence_ref?: string;
+  help?: string;
+  safety_note?: string;
+  counterparts?: SemanticValueCounterpart[];
+  role?: string;
+  format?: string;
+  precision?: number;
+  meta?: Record<string, unknown>;
+};
+
+export type RouteState = "hot" | "warm" | "fallback" | "offline" | "unknown";
+
+export type RouteCandidate = {
+  id: string;
+  label?: string;
+  transport?: string;
+  state: RouteState;
+  endpoint?: string;
+  latency_ms?: number;
+  latency_unit?: "ms";
+  rate?: number;
+  rate_unit?: string;
+  priority?: number;
+  healthy?: boolean;
+  preferred?: boolean;
+  notes?: string;
+  meta?: Record<string, unknown>;
+};
+
+export type RouteRedundancyContract = {
+  subject_id: string;
+  subject_label?: string;
+  active_route_id?: string;
+  hot?: RouteCandidate[];
+  warm?: RouteCandidate[];
+  fallback?: RouteCandidate[];
+  candidates?: RouteCandidate[];
+  transport?: string;
+  endpoint?: string;
+  redundancy_mode?: string;
+  primary_state?: RouteState;
+  meta?: Record<string, unknown>;
+};
+
+export type JsonSignalCatalogueEntry = SemanticSignal & {
+  title?: string;
+  description?: string;
+  help?: string;
+  safety_note?: string;
+  evidence_ref?: string;
+  counterparts?: SemanticValueCounterpart[];
+};
+
+export type JsonSignalCatalogue = {
+  schema_version?: string | number;
+  source?: string;
+  generated_at?: string;
+  signals: JsonSignalCatalogueEntry[];
+  channels?: Channel[];
+  meta?: Record<string, unknown>;
+};
+
 // ---- graph_tile.v1 types ----
 
 export type TilePoint = {
@@ -295,7 +416,7 @@ export interface SignalCatalogueAdapter {
 }
 
 export interface TileAdapter {
-  fetchTile(wallId: string, cardId: string, level: "live" | "minute" | "hour"): Promise<GraphTile>;
+  fetchTile(wallId: string, cardId: string, level: "live" | "minute" | "hour" | "three_hour" | "day" | "three_day"): Promise<GraphTile>;
 }
 
 export interface AssignmentsStoreOptions {
