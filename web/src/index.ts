@@ -112,6 +112,7 @@ export {
   clampTime,
   rawValueAt,
   stateAt,
+  stateLabel,
   formatLegendValue,
   formatScientific,
   formatPressure,

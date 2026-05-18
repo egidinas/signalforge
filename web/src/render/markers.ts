@@ -175,14 +175,20 @@ export function rawValueAt(series: TileSeries, timeMs: number, tile?: GraphTile)
     .filter((point) => Number.isFinite(point.t))
     .sort((a, b) => a.t - b.t);
   if (!points.length) return undefined;
-  if (timeMs < points[0].t || timeMs > points[points.length - 1].t) return undefined;
+  const first = points[0];
+  const last = points[points.length - 1];
+  const gapThreshold = tile ? commandCenterTraceGapMs(tile, series) : 0;
+  if (timeMs < first.t) return undefined;
+  if (timeMs > last.t) {
+    if (gapThreshold <= 0 || timeMs - last.t > gapThreshold || !Number.isFinite(last.v)) return undefined;
+    return valueFromInterpolation(series, last.v);
+  }
   if (timeMs === points[0].t) return valueFromInterpolation(series, points[0].v);
   if (timeMs === points[points.length - 1].t) return valueFromInterpolation(series, points[points.length - 1].v);
   let cursor = 0;
   while (cursor + 1 < points.length && points[cursor + 1].t <= timeMs) cursor += 1;
   const current = points[cursor];
   const next = points[Math.min(cursor + 1, points.length - 1)];
-  const gapThreshold = tile ? commandCenterTraceGapMs(tile, series) : 0;
   if (gapThreshold > 0 && next.t - current.t > gapThreshold && timeMs > current.t && timeMs < next.t) return undefined;
   if (timeMs === current.t) return Number.isFinite(current.v) ? valueFromInterpolation(series, current.v) : undefined;
   if (!Number.isFinite(current.v) || !Number.isFinite(next.v)) return undefined;

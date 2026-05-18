@@ -83,6 +83,28 @@ describe("markers", () => {
     expect(readouts.has("actual")).toBe(false);
   });
 
+  it("keeps fresh command-center readouts just after the latest sample", () => {
+    const series: TileSeries = {
+      id: "actual",
+      label: "Actual",
+      role: "actual",
+      source: "fixture",
+      axis_id: "temperature_c",
+      unit: "degC",
+      points: [
+        { timestamp: "2024-01-01T00:00:00.000Z", value: 20 },
+        { timestamp: "2024-01-01T00:10:00.000Z", value: 21 },
+      ],
+    };
+    const graphTile = tile([series], "command_center_fat");
+    const freshCursor = Date.parse("2024-01-01T00:11:00.000Z");
+    const staleCursor = Date.parse("2024-01-01T02:11:00.000Z");
+
+    expect(rawValueAt(series, freshCursor, graphTile)).toBe(21);
+    expect(legendReadouts(graphTile, [{ id: "actual", label: "Actual" }], freshCursor).get("actual")).toBe("21.0 degC");
+    expect(rawValueAt(series, staleCursor, graphTile)).toBeUndefined();
+  });
+
   it("suppresses pressure legend values the plot treats as invalid", () => {
     const graphTile = tile([{
       id: "pressure",
