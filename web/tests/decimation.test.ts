@@ -1,4 +1,14 @@
-import { decimationValue, lttb, lttbPreservingGaps, resampleSeries, viewportSeries } from "../src/render/decimation";
+import {
+  commandCenterGapBreaks,
+  commandCenterGapBreaksFromPoints,
+  decimationValue,
+  lttb,
+  lttbPreservingGaps,
+  prepareSeriesPoints,
+  resamplePreparedSeries,
+  resampleSeries,
+  viewportSeries,
+} from "../src/render/decimation";
 import type { GraphTile, TileSeries } from "../src/types";
 
 describe("decimation", () => {
@@ -117,6 +127,35 @@ describe("decimation", () => {
 
     expect(decimated.points?.some((point) => point.value === 0)).toBe(true);
     expect(resampleSeries(graphTile, decimated, [gapTime, gapTime + 500])).toEqual([null, null]);
+  });
+
+  it("reuses prepared parsed points for resampling and command-center gap breaks", () => {
+    const series: TileSeries = {
+      id: "actual",
+      label: "Actual",
+      role: "actual",
+      source: "fixture",
+      points: [
+        { timestamp: "2024-01-01T03:00:00.000Z", value: 30 },
+        { timestamp: "2024-01-01T00:00:00.000Z", value: 0 },
+        { timestamp: "2024-01-01T00:30:00.000Z", value: 10 },
+      ],
+    };
+    const graphTile = tile([series], "command_center_fat");
+    const xValues = [
+      Date.parse("2024-01-01T00:15:00.000Z"),
+      Date.parse("2024-01-01T02:00:00.000Z"),
+    ];
+
+    const prepared = prepareSeriesPoints(series);
+
+    expect(prepared.map((point) => point.t)).toEqual([
+      Date.parse("2024-01-01T00:00:00.000Z"),
+      Date.parse("2024-01-01T00:30:00.000Z"),
+      Date.parse("2024-01-01T03:00:00.000Z"),
+    ]);
+    expect(resamplePreparedSeries(graphTile, series, prepared, xValues)).toEqual(resampleSeries(graphTile, series, xValues));
+    expect(commandCenterGapBreaksFromPoints(graphTile, series, prepared)).toEqual(commandCenterGapBreaks(graphTile, series));
   });
 
   it("keeps gap-preserving pressure decimation within the viewport budget under dense gaps", () => {

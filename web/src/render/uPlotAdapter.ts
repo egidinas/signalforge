@@ -2,7 +2,16 @@ import uPlot from "uplot";
 import type { GraphMarker, GraphTile, HeroGraphModel, TileSeries } from "../types";
 import { colorForSignal, signalPriority } from "./visualPolicy";
 import { timeTicks } from "./timeAxis";
-import { viewportSeries, commandCenterGapBreaks, resampleSeries, decimationValue, commandCenterProjectedSeries, displayValue } from "./decimation";
+import {
+  viewportSeries,
+  commandCenterGapBreaksFromPoints,
+  prepareSeriesPoints,
+  resamplePreparedSeries,
+  decimationValue,
+  commandCenterProjectedSeries,
+  displayValue,
+} from "./decimation";
+import type { PreparedSeriesPoint } from "./decimation";
 import { markerColor, operatorMarkerLines, placeMarkerLabel, rectanglesOverlap, fitCanvasText, shortGateLabel, rawValueAt, stateLabel } from "./markers";
 
 export type TimeRange = {
@@ -19,17 +28,23 @@ export type UPlotBuild = {
 
 const DAY_MS = 86_400_000;
 
+type PreparedTileSeries = {
+  series: TileSeries;
+  points: PreparedSeriesPoint[];
+};
+
 export function uplotData(tile: GraphTile, currentTimeMs?: number, viewportWidth = 900): UPlotBuild {
   const tileSeries = tile.series.filter((series) => (series.points ?? []).length > 0).sort(seriesDrawOrder);
   const plottedSeries = tileSeries.map((series) => viewportSeries(tile, series, viewportWidth));
-  const xValues = sharedTimeGrid(tile, plottedSeries);
+  const preparedSeries = plottedSeries.map((series) => ({ series, points: prepareSeriesPoints(series) }));
+  const xValues = sharedTimeGridFromPrepared(tile, preparedSeries);
   const data: uPlot.AlignedData = [xValues];
   const series: uPlot.Series[] = [{}];
   const scaleKeys = new Set<string>();
-  plottedSeries.forEach((seriesTile, index) => {
+  preparedSeries.forEach(({ series: seriesTile, points }, index) => {
     const scale = scaleForSeries(tile, seriesTile);
     scaleKeys.add(scale);
-    data.push(resampleSeries(tile, seriesTile, xValues, currentTimeMs));
+    data.push(resamplePreparedSeries(tile, seriesTile, points, xValues, currentTimeMs));
     series.push({
       label: seriesTile.label,
       scale,
@@ -72,12 +87,16 @@ export function lineWidthFor(role: string) {
 }
 
 export function sharedTimeGrid(tile: GraphTile, tileSeries: TileSeries[]): number[] {
+  return sharedTimeGridFromPrepared(tile, tileSeries.map((series) => ({ series, points: prepareSeriesPoints(series) })));
+}
+
+function sharedTimeGridFromPrepared(tile: GraphTile, tileSeries: PreparedTileSeries[]): number[] {
   const start = Date.parse(tile.t0);
   const end = Date.parse(tile.t1);
   const finiteTimes = tileSeries
-    .flatMap((series) => (series.points ?? []).map((point) => Date.parse(point.timestamp)))
+    .flatMap((series) => series.points.map((point) => point.t))
     .filter(Number.isFinite);
-  const gapTimes = tileSeries.flatMap((series) => commandCenterGapBreaks(tile, series));
+  const gapTimes = tileSeries.flatMap(({ series, points }) => commandCenterGapBreaksFromPoints(tile, series, points));
   const t0 = Number.isFinite(start) ? start : Math.min(...finiteTimes);
   const t1 = Number.isFinite(end) ? end : Math.max(...finiteTimes);
   if (!Number.isFinite(t0) || !Number.isFinite(t1) || t1 <= t0) {

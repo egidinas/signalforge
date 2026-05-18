@@ -2,6 +2,10 @@ import type { GraphTile, TileSeries } from "../types";
 
 type TilePoint = NonNullable<TileSeries["points"]>[number];
 type TilePointRun = NonNullable<TileSeries["points"]>;
+export type PreparedSeriesPoint = {
+  t: number;
+  v: number;
+};
 type GapAwareSegment =
   | { kind: "run"; points: TilePointRun }
   | { kind: "gap"; point: TilePoint };
@@ -202,10 +206,17 @@ export function decimationValue(_tile: GraphTile, series: TileSeries, value: num
 }
 
 export function resampleSeries(tile: GraphTile, series: TileSeries, xValues: number[], currentTimeMs?: number): Array<number | null> {
-  const points = [...(series.points ?? [])]
+  return resamplePreparedSeries(tile, series, prepareSeriesPoints(series), xValues, currentTimeMs);
+}
+
+export function prepareSeriesPoints(series: TileSeries): PreparedSeriesPoint[] {
+  return [...(series.points ?? [])]
     .map((point) => ({ t: Date.parse(point.timestamp), v: interpolationValue(series, point.value) }))
     .filter((point) => Number.isFinite(point.t))
     .sort((a, b) => a.t - b.t);
+}
+
+export function resamplePreparedSeries(tile: GraphTile, series: TileSeries, points: PreparedSeriesPoint[], xValues: number[], currentTimeMs?: number): Array<number | null> {
   if (!points.length) return xValues.map(() => null);
 
   const stepped = isDiscreteSeries(series) || series.render_kind === "swimlane";
@@ -229,16 +240,16 @@ export function resampleSeries(tile: GraphTile, series: TileSeries, xValues: num
 }
 
 export function commandCenterGapBreaks(tile: GraphTile, series: TileSeries) {
+  return commandCenterGapBreaksFromPoints(tile, series, prepareSeriesPoints(series));
+}
+
+export function commandCenterGapBreaksFromPoints(tile: GraphTile, series: TileSeries, points: PreparedSeriesPoint[]) {
   const gapThreshold = commandCenterTraceGapMs(tile, series);
   if (gapThreshold <= 0) return [];
-  const points = [...(series.points ?? [])]
-    .map((point) => Date.parse(point.timestamp))
-    .filter(Number.isFinite)
-    .sort((a, b) => a - b);
   const breaks: number[] = [];
   for (let i = 1; i < points.length; i += 1) {
-    if (points[i] - points[i - 1] > gapThreshold) {
-      breaks.push(points[i - 1] + 1, points[i] - 1);
+    if (points[i].t - points[i - 1].t > gapThreshold) {
+      breaks.push(points[i - 1].t + 1, points[i].t - 1);
     }
   }
   return breaks;
