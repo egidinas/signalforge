@@ -96,6 +96,9 @@ export {
   displayValue,
   lttb,
   commandCenterTraceGapMs,
+  interpolationValue,
+  isDiscreteSeries,
+  valueFromInterpolation,
 } from "./render/decimation";
 export {
   markerColor,

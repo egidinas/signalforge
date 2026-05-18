@@ -147,9 +147,19 @@ export function normalizeGraphTile(tile: unknown, opts: LooseRecord = {}): Graph
   const series = (Array.isArray(sourceTile.series) ? sourceTile.series : [])
     .map(normalizeSeries)
     .filter((item) => (item.points?.length ?? 0) > 0 || (item.spans?.length ?? 0) > 0);
-  const extents = series
-    .flatMap((item) => item.points || [])
-    .map((point) => Date.parse(point.timestamp))
+  const bands = Array.isArray(sourceTile.bands) ? sourceTile.bands as GraphTile["bands"] : [];
+  const markers = Array.isArray(sourceTile.markers) ? sourceTile.markers as GraphTile["markers"] : [];
+  const events = Array.isArray(sourceTile.events) ? sourceTile.events as GraphTile["events"] : [];
+  const extents = [
+    ...series.flatMap((item) => [
+      ...(item.points || []).map((point) => point.timestamp),
+      ...(item.spans || []).flatMap((span) => [span.start, span.end]),
+    ]),
+    ...bands.flatMap((band) => [band.start, band.end]),
+    ...markers.map((marker) => marker.timestamp),
+    ...events.map((event) => event.timestamp),
+  ]
+    .map((timestamp) => Date.parse(timestamp))
     .filter(Number.isFinite);
   const nowMs = Date.now();
   const parsedT0 = parseTime(sourceTile.t0);
@@ -159,6 +169,7 @@ export function normalizeGraphTile(tile: unknown, opts: LooseRecord = {}): Graph
   const t0 = new Date(t0Ms).toISOString();
   const t1 = new Date(Math.max(t1Ms, t0Ms + 1)).toISOString();
   const pointCount = series.reduce((acc, item) => acc + (item.points?.length || 0), 0);
+  const diagnosticsStatus = text(diagnostics.status, series.length > 0 ? "ok" : "empty");
   return {
     ...fallback,
     ...(sourceTile as Partial<GraphTile>),
@@ -175,13 +186,13 @@ export function normalizeGraphTile(tile: unknown, opts: LooseRecord = {}): Graph
     title: text(sourceTile.title, fallback.title),
     time_window_ms: timeWindowMs,
     axes: Array.isArray(sourceTile.axes) ? sourceTile.axes : fallback.axes,
-    bands: Array.isArray(sourceTile.bands) ? sourceTile.bands as GraphTile["bands"] : [],
-    markers: Array.isArray(sourceTile.markers) ? sourceTile.markers as GraphTile["markers"] : [],
-    events: Array.isArray(sourceTile.events) ? sourceTile.events as GraphTile["events"] : [],
+    bands,
+    markers,
+    events,
     diagnostics: {
       ...fallback.diagnostics,
       ...diagnostics,
-      status: series.length > 0 ? "ok" : text(diagnostics.status, "empty"),
+      status: diagnosticsStatus,
       point_count: pointCount,
       raw_point_count: numberOrUndefined(diagnostics.raw_point_count) ?? pointCount,
       decimation: text(diagnostics.decimation, "none"),
@@ -195,7 +206,7 @@ export function normalizeGraphTile(tile: unknown, opts: LooseRecord = {}): Graph
 
 function normalizeSeries(value: unknown): LooseTileSeries {
   const series = recordOrEmpty(value);
-  const sourceObj = isRecord(series.source) ? series.source : isRecord(series.source_obj) ? series.source_obj : undefined;
+  const sourceObj = recordFrom(series.source_obj) ?? recordFrom(series.source_ref) ?? recordFrom(series.source);
   const legacyRole = text(series.role ?? series.seriesRole, "actual");
   const role = canonicalRole(legacyRole);
   const id = text(series.series_id ?? series.id ?? series.key ?? series.target_id ?? series.targetId ?? series.label, "series");
@@ -210,7 +221,7 @@ function normalizeSeries(value: unknown): LooseTileSeries {
     seriesRole: legacyRole,
     unit,
     units: unit,
-    axis_id: text(series.axis_id ?? axisIdForSeries(series, unit)),
+    axis_id: text(series.axis_id ?? axisIdForSeries({ ...series, id, role, seriesRole: legacyRole }, unit)),
     source: stringifySource(series.source_ref ?? series.source ?? sourceObj ?? id),
     source_obj: sourceObj,
     color: typeof series.color === "string" ? series.color : undefined,
@@ -222,8 +233,6 @@ function normalizeSeries(value: unknown): LooseTileSeries {
 function canonicalRole(role: unknown) {
   const value = text(role, "actual");
   if (value === "cmd") return "command";
-  if (value === "dut") return "actual";
-  if (value === "aux") return "actual";
   return value || "actual";
 }
 
@@ -231,16 +240,29 @@ function axisIdForSeries(series: LooseRecord, unit: unknown) {
   const explicit = series.axis_id ?? series.axisId;
   if (explicit) return text(explicit);
   const u = text(unit ?? series.unit ?? series.units).trim().toLowerCase();
-  const label = `${series.id || ""} ${series.label || ""} ${series.full_label || ""}`.toLowerCase();
+  const label = [
+    series.id,
+    series.series_id,
+    series.key,
+    series.target_id,
+    series.targetId,
+    series.label,
+    series.full_label,
+    series.fullLabel,
+  ].filter(Boolean).join(" ").toLowerCase();
+  if (series.role === "counter" || series.seriesRole === "counter" || series.kind === "counter") return "counter";
   if (u === "a" || u === "amp" || u === "amps") return "current_a";
   if (u === "v" || u === "volt" || u === "volts") return "voltage_v";
   if (u === "w" || u === "watt" || u === "watts") return "power_w";
   if (u === "%" || u === "percent") return "percent";
   if (u === "ms" || u === "millisecond" || u === "milliseconds") return "bus_ms";
   if (u === "s" || u === "sec" || u === "secs" || u === "second" || u === "seconds") return "seconds";
-  if (u.includes("deg") || u === "c" || u === "degc" || u === "deg c") return "temperature_c";
+  if (u === "mbar" || u === "millibar" || u === "millibars") return "pressure_log";
+  if (u === "mbar/min" || u === "mbar/minute" || u === "millibar/min" || u === "millibars/minute") return "pressure_rate_log";
+  if (u === "bar") return "pressure_bar";
+  if (u.includes("deg") || u === "c" || u === "degc" || u === "deg c" || u === "°c" || u === "° c") return "temperature_c";
   if (label.includes("counter")) return "counter";
-  if (series.role === "counter" || series.kind === "counter") return "counter";
+  if (label.includes("pressure") || label.includes("vacuum")) return "pressure_log";
   return "generic_numeric";
 }
 
@@ -311,6 +333,10 @@ function schemaVersion(value: unknown, fallback: GraphTile["schema_version"]): G
 
 function recordOrEmpty(value: unknown): LooseRecord {
   return isRecord(value) ? value : {};
+}
+
+function recordFrom(value: unknown): LooseRecord | undefined {
+  return isRecord(value) ? value : undefined;
 }
 
 function isRecord(value: unknown): value is LooseRecord {

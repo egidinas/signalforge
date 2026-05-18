@@ -3,7 +3,7 @@ import type { GraphMarker, GraphTile, HeroGraphModel, TileSeries } from "../type
 import { colorForSignal, signalPriority } from "./visualPolicy";
 import { timeTicks } from "./timeAxis";
 import { viewportSeries, commandCenterGapBreaks, resampleSeries, decimationValue, commandCenterProjectedSeries, displayValue } from "./decimation";
-import { markerColor, operatorMarkerLines, placeMarkerLabel, rectanglesOverlap, fitCanvasText, shortGateLabel, rawValueAt } from "./markers";
+import { markerColor, operatorMarkerLines, placeMarkerLabel, rectanglesOverlap, fitCanvasText, shortGateLabel, rawValueAt, stateLabel } from "./markers";
 
 export type TimeRange = {
   start: number;
@@ -49,7 +49,9 @@ export function seriesDrawOrder(a: TileSeries, b: TileSeries) {
     actual: 10,
     source_quality: 12,
     counter: 14,
+    dut: 40,
     command: 45,
+    aux: 50,
     event: 50,
     interlock: 55,
     evidence: 60,
@@ -64,6 +66,8 @@ export function lineWidthFor(role: string) {
   if (role === "ghost") return 0.9;
   if (role === "acceptance_band") return 0.75;
   if (role === "counter" || role === "source_quality") return 1.05;
+  if (role === "dut") return 1.1;
+  if (role === "aux") return 0.95;
   return 0.85;
 }
 
@@ -82,12 +86,41 @@ export function sharedTimeGrid(tile: GraphTile, tileSeries: TileSeries[]): numbe
   return Array.from(new Set([start, end, ...finiteTimes, ...gapTimes])).filter(Number.isFinite).sort((a, b) => a - b);
 }
 
+function finiteTileTimes(tile: GraphTile) {
+  return [
+    ...(tile.series ?? []).flatMap((series) => [
+      ...(series.points ?? []).map((point) => Date.parse(point.timestamp)),
+      ...(series.spans ?? []).flatMap((span) => [Date.parse(span.start), Date.parse(span.end)]),
+    ]),
+    ...(tile.markers ?? []).map((marker) => Date.parse(marker.timestamp)),
+    ...(tile.bands ?? []).flatMap((band) => [Date.parse(band.start), Date.parse(band.end)]),
+  ].filter(Number.isFinite);
+}
+
+function overlayTimeBounds(tile: GraphTile, timeRange?: TimeRange): TimeRange | null {
+  const parsedStart = timeRange?.start ?? Date.parse(tile.t0);
+  const parsedEnd = timeRange?.end ?? Date.parse(tile.t1);
+  let start = Number.isFinite(parsedStart) ? parsedStart : undefined;
+  let end = Number.isFinite(parsedEnd) ? parsedEnd : undefined;
+  if (start === undefined || end === undefined) {
+    const finiteTimes = finiteTileTimes(tile);
+    if (!finiteTimes.length) return null;
+    if (start === undefined) start = Math.min(...finiteTimes);
+    if (end === undefined) end = Math.max(...finiteTimes);
+  }
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return null;
+  if (end <= start) return { start, end: start + 1 };
+  return { start, end };
+}
+
 export function buildScales(scaleKeys: Set<string>): Record<string, uPlot.Scale> {
   const scales: Record<string, uPlot.Scale> = {};
   scaleKeys.forEach((key) => {
     if (key === "temperature_c") scales[key] = { range: paddedRange(12, [-92, 92]) };
     else if (key === "pressure_log") scales[key] = { distr: 3, log: 10, range: () => [1e-8, 1.2e3] };
     else if (key === "pressure_rate_log") scales[key] = { distr: 3, log: 10, range: () => [1e-8, 1e3] };
+    else if (key === "pressure_mbar") scales[key] = { range: paddedRange(0.08, [0, 1.2e3]) };
+    else if (key === "pressure_rate") scales[key] = { range: paddedRange(0.08) };
     else if (key === "pressure_bar") scales[key] = { range: paddedRange(0.08, [0, 12]) };
     else if (key === "percent") scales[key] = { range: (_u, _min, _max) => [0, 100] };
     else if (key === "heat_flux_w") scales[key] = { range: paddedRange(8, [-45, 45]) };
@@ -115,6 +148,8 @@ export function buildAxes(scaleKeys: Set<string>, tile: GraphTile): uPlot.Axis[]
     "counter",
     "pressure_log",
     "pressure_rate_log",
+    "pressure_mbar",
+    "pressure_rate",
     "pressure_bar",
     "percent",
     "generic_numeric",
@@ -172,14 +207,27 @@ export function buildAxes(scaleKeys: Set<string>, tile: GraphTile): uPlot.Axis[]
 
 export function paddedRange(minPad: number, clamp?: [number, number]): uPlot.Range.Function {
   return (_u: uPlot, min: number, max: number) => {
-    if (!Number.isFinite(min) || !Number.isFinite(max)) return clamp ?? [0, 1] as [number, number];
-    if (max <= min) return [min - minPad, max + minPad] as [number, number];
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return normalizedClamp(clamp) ?? [0, 1] as [number, number];
+    if (max <= min) return clampPaddedRange(min - minPad, max + minPad, clamp);
     const pad = Math.max(minPad, (max - min) * 0.08);
     const low = min - pad;
     const high = max + pad;
-    if (!clamp) return [low, high] as [number, number];
-    return [Math.max(clamp[0], low), Math.min(clamp[1], high)] as [number, number];
+    return clampPaddedRange(low, high, clamp);
   };
+}
+
+function clampPaddedRange(low: number, high: number, clamp?: [number, number]): [number, number] {
+  if (!clamp) return [low, high];
+  const normalized = normalizedClamp(clamp);
+  if (!normalized) return [low, high];
+  const clampedLow = Math.max(normalized[0], low);
+  const clampedHigh = Math.min(normalized[1], high);
+  return clampedLow <= clampedHigh ? [clampedLow, clampedHigh] : normalized;
+}
+
+function normalizedClamp(clamp?: [number, number]): [number, number] | undefined {
+  if (!clamp || !Number.isFinite(clamp[0]) || !Number.isFinite(clamp[1])) return undefined;
+  return clamp[0] <= clamp[1] ? clamp : [clamp[1], clamp[0]];
 }
 
 export function logScale(scale: string) {
@@ -211,6 +259,8 @@ export function axisLabel(scale: string, _tile: GraphTile) {
   if (scale === "temperature_c") return "degC";
   if (scale === "pressure_log") return "log10 mbar";
   if (scale === "pressure_rate_log") return "log10 mbar/min";
+  if (scale === "pressure_mbar") return "mbar";
+  if (scale === "pressure_rate") return "mbar/min";
   if (scale === "pressure_bar") return "bar";
   if (scale === "heat_flux_w") return "W";
   if (scale === "power_w") return "W";
@@ -225,8 +275,10 @@ export function axisLabel(scale: string, _tile: GraphTile) {
 }
 
 export function scaleForSeries(_tile: GraphTile, series: TileSeries): string {
-  if (series.axis_id === "pressure_mbar") return "pressure_log";
-  if (series.axis_id === "pressure_rate") return "pressure_rate_log";
+  if (series.axis_id === "pressure_log") return "pressure_log";
+  if (series.axis_id === "pressure_rate_log") return "pressure_rate_log";
+  if (series.axis_id === "pressure_mbar") return "pressure_mbar";
+  if (series.axis_id === "pressure_rate") return "pressure_rate";
   if (series.axis_id === "pressure_bar") return "pressure_bar";
   if (series.axis_id === "power_w") return "power_w";
   if (series.axis_id === "heat_flux_w") return "heat_flux_w";
@@ -262,7 +314,7 @@ export function stateBlocks(series: TileSeries, start: number, span: number) {
         left,
         width: right - left,
         value: state.value ?? Number(state.state ?? 0),
-        label: state.label ?? state.state ?? "",
+        label: stateLabel(series, state.value, state.state, state.label) ?? "",
       }];
     });
   }
@@ -299,7 +351,7 @@ function formatScientific(value: number) {
 function markerAnchor(plot: uPlot, tile: GraphTile, marker: GraphMarker, timeMs: number, top: number, height: number) {
   const anchorSeries = rankedMarkerAnchorSeries(tile, marker);
   for (const series of anchorSeries) {
-    const raw = rawValueAt(series, timeMs);
+    const raw = rawValueAt(series, timeMs, tile);
     if (raw === undefined) continue;
     const scale = scaleForSeries(tile, series);
     const y = plot.valToPos(displayValue(tile, series, raw), scale);
@@ -322,6 +374,7 @@ function markerAnchorScore(series: TileSeries, marker: GraphMarker) {
   const haystack = `${series.id} ${series.label} ${series.axis_id ?? ""} ${series.source ?? ""} ${series.role}`.toLowerCase();
   const markerText = `${marker.id} ${marker.label} ${marker.kind} ${marker.role} ${marker.axis_id ?? ""}`.toLowerCase();
   const commandAnchored = commandAnchoredMarker(marker);
+  const interlockAnchored = isInterlockMarker(marker);
   let score = 0;
   const addIfMarkerAndSeries = (markerTokens: string[], seriesTokens: string[], points: number) => {
     if (!markerTokens.some((token) => markerText.includes(token))) return;
@@ -333,6 +386,7 @@ function markerAnchorScore(series: TileSeries, marker: GraphMarker) {
   addIfMarkerAndSeries(["interlock"], ["interlock", "facility"], 70);
   addIfMarkerAndSeries(["operator", "command"], ["command", "chamber"], 55);
   addIfMarkerAndSeries(["pump", "exhaust"], ["pump", "exhaust", "cryo", "scavenger"], 55);
+  if (interlockAnchored && (haystack.includes("interlock") || haystack.includes("facility"))) score += 180;
   if (marker.axis_id && series.axis_id === marker.axis_id) score += 90;
   if (commandAnchored && series.role === "command") score += 220;
   if (series.role === "actual") score += commandAnchored ? 4 : 18;
@@ -341,13 +395,24 @@ function markerAnchorScore(series: TileSeries, marker: GraphMarker) {
   return score;
 }
 
+function isInterlockMarker(marker: GraphMarker) {
+  return marker.role === "interlock" || marker.kind === "interlock" || marker.result === "fail";
+}
+
+function isAttachedMarker(marker: GraphMarker) {
+  return marker.kind === "functional_gate"
+    || marker.kind === "stability"
+    || marker.kind === "stability_achieved"
+    || marker.kind === "pressure_gate"
+    || isInterlockMarker(marker);
+}
+
 function commandAnchoredMarker(marker: GraphMarker) {
   return marker.role === "operator_interaction"
     || marker.kind?.startsWith("operator_")
     || marker.kind === "functional_gate"
     || marker.kind === "stability"
-    || marker.kind === "stability_achieved"
-    || marker.kind === "interlock";
+    || marker.kind === "stability_achieved";
 }
 
 function drawExactMarkerAnchorLine(ctx: CanvasRenderingContext2D, x: number, top: number, height: number, color: string, alpha = 0.42) {
@@ -396,15 +461,16 @@ function bandStrokeStyle(tile: GraphTile, bandKind: string) {
   return "rgba(255,176,0,0.14)";
 }
 
-export function drawTileOverlays(plot: uPlot, tile: GraphTile, heroGraph: HeroGraphModel, currentTimeMs?: number, hoverTimeMs?: number, timeRange?: TimeRange) {
+export function drawTileOverlays(plot: uPlot, tile: GraphTile, heroGraph?: HeroGraphModel, currentTimeMs?: number, hoverTimeMs?: number, timeRange?: TimeRange) {
   const ctx = plot.ctx;
   const bbox = plot.bbox;
   const left = bbox.left;
   const top = bbox.top;
   const width = bbox.width;
   const height = bbox.height;
-  const start = timeRange?.start ?? Date.parse(tile.t0);
-  const end = timeRange?.end ?? Date.parse(tile.t1);
+  const bounds = overlayTimeBounds(tile, timeRange);
+  if (!bounds) return;
+  const { start, end } = bounds;
   const span = Math.max(1, end - start);
   ctx.save();
   const ticks = timeTicks(new Date(start).toISOString(), new Date(end).toISOString(), 14);
@@ -465,7 +531,7 @@ export function drawTileOverlays(plot: uPlot, tile: GraphTile, heroGraph: HeroGr
     if (x < left || x > left + width) return;
     const color = markerColor(marker);
     const operatorMarker = marker.role === "operator_interaction" || marker.kind?.startsWith("operator_");
-    const attachedMarker = marker.kind === "functional_gate" || marker.kind === "stability" || marker.kind === "stability_achieved" || marker.kind === "interlock" || marker.kind === "pressure_gate";
+    const attachedMarker = isAttachedMarker(marker);
     const anchor = attachedMarker || operatorMarker ? markerAnchor(plot, tile, marker, markerTime, top, height) : null;
     const anchorY = anchor?.y ?? top + 10;
     if (attachedMarker || operatorMarker) {
@@ -586,6 +652,7 @@ export function drawTileOverlays(plot: uPlot, tile: GraphTile, heroGraph: HeroGr
       drawnMarkerLabels += 1;
       ctx.restore();
     } else {
+      ctx.fillStyle = color;
       ctx.beginPath();
       ctx.arc(x, top + 10, 3.2, 0, Math.PI * 2);
       ctx.fill();
@@ -596,16 +663,18 @@ export function drawTileOverlays(plot: uPlot, tile: GraphTile, heroGraph: HeroGr
     host.dataset.markerLabelsExpected = String(expectedMarkerLabels);
     host.dataset.markerLabelsDrawn = String(drawnMarkerLabels);
   }
-  const now = currentTimeMs ?? Date.parse(heroGraph.time_axis.now ?? heroGraph.execution?.now ?? "");
+  const nowFromHero = heroGraph?.time_axis?.now ?? heroGraph?.execution?.now ?? "";
+  const now = currentTimeMs ?? Date.parse(nowFromHero);
   if (Number.isFinite(now)) {
     const x = left + ((now - start) / span) * width;
+    const clampedX = Math.max(left, Math.min(left + width, x));
     ctx.fillStyle = "rgba(3,7,12,0.58)";
-    ctx.fillRect(Math.max(left, x), top, Math.max(0, left + width - x), height);
+    ctx.fillRect(clampedX, top, Math.max(0, left + width - clampedX), height);
     ctx.strokeStyle = "rgba(242,247,255,0.9)";
     ctx.setLineDash([3, 3]);
     ctx.beginPath();
-    ctx.moveTo(x, top);
-    ctx.lineTo(x, top + height);
+    ctx.moveTo(clampedX, top);
+    ctx.lineTo(clampedX, top + height);
     ctx.stroke();
   }
   if (Number.isFinite(hoverTimeMs)) {

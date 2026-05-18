@@ -7,7 +7,8 @@ export type TimeRange = {
 
 export function clampRange(range: TimeRange, fullRange: TimeRange, minSpan: number): TimeRange {
   const fullSpan = Math.max(1, fullRange.end - fullRange.start);
-  const span = Math.max(minSpan, Math.min(fullSpan, range.end - range.start));
+  const effectiveMinSpan = Math.min(fullSpan, Math.max(1, minSpan));
+  const span = Math.max(effectiveMinSpan, Math.min(fullSpan, range.end - range.start));
   let start = range.start;
   let end = range.start + span;
   if (start < fullRange.start) {

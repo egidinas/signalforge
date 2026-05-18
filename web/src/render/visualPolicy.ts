@@ -5,6 +5,8 @@ export const roleColors: Record<string, string> = {
   ghost: "#8aa7c4",
   acceptance_band: "#3ddc84",
   actual: "#56d6df",
+  dut: "#ff6b35",
+  aux: "#9db4c8",
   source_quality: "#66b8ef",
   counter: "#b8a6ff",
   interlock: "#ff6374",
@@ -106,8 +108,11 @@ export function colorForSignal(signal: Pick<TileSeries, "id" | "role" | "render_
   if (signalColors[signal.id]) return signalColors[signal.id];
   const semantic = semanticColor(signal.id);
   if (semantic) return semantic;
-  if (signal.role === "command" || signal.role === "ghost" || signal.role === "acceptance_band" || signal.role === "interlock" || signal.role === "evidence") return roleColors[signal.role];
-  return paletteForID(signal.id, index) ?? roleColors[signal.role] ?? (kind ? roleColors[kind] : undefined) ?? palette(index);
+  const roleColor = roleColors[signal.role];
+  if (roleColor) return roleColor;
+  const kindColor = kind ? roleColors[kind] : undefined;
+  if (kindColor) return kindColor;
+  return paletteForID(signal.id, index) ?? palette(index);
 }
 
 export function semanticColor(id: string) {

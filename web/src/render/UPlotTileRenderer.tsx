@@ -26,11 +26,36 @@ export function UPlotTileRenderer({
 }: UPlotTileRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const plotRef = useRef<uPlot | null>(null);
+  const plotTileRef = useRef<GraphTile | null>(null);
+  const heroGraphRef = useRef<HeroGraphModel | undefined>(heroGraph);
+  const currentTimeRef = useRef<number | undefined>(currentTimeMs);
+  const hoverTimeRef = useRef<number | undefined>(hoverTimeMs);
+
+  useEffect(() => {
+    heroGraphRef.current = heroGraph;
+    plotRef.current?.redraw();
+  }, [heroGraph]);
+
+  useEffect(() => {
+    currentTimeRef.current = currentTimeMs;
+    const plot = plotRef.current;
+    const plotTile = plotTileRef.current;
+    if (!plot || !plotTile) return;
+    const width = plot.width || containerRef.current?.offsetWidth || 900;
+    const built = uplotData(plotTile, currentTimeMs, width);
+    plot.setData(built.data, false);
+    plot.redraw();
+  }, [currentTimeMs]);
+
+  useEffect(() => {
+    hoverTimeRef.current = hoverTimeMs;
+    plotRef.current?.redraw();
+  }, [hoverTimeMs]);
 
   const build = useCallback(() => {
     if (!containerRef.current) return;
     const width = containerRef.current.offsetWidth || 900;
-    const built = uplotData(tile, currentTimeMs, width);
+    const built = uplotData(tile, currentTimeRef.current, width);
 
     const hooks: uPlot.Hooks.Arrays = {
       draw: [
@@ -38,9 +63,9 @@ export function UPlotTileRenderer({
           drawTileOverlays(
             u,
             tile,
-            heroGraph ?? ({} as HeroGraphModel),
-            currentTimeMs,
-            hoverTimeMs,
+            heroGraphRef.current,
+            currentTimeRef.current,
+            hoverTimeRef.current,
           );
         },
       ],
@@ -60,20 +85,28 @@ export function UPlotTileRenderer({
       plotRef.current.destroy();
     }
     plotRef.current = new uPlot(opts, built.data, containerRef.current);
-  }, [tile, heroGraph, height, currentTimeMs, hoverTimeMs, syncKey]);
+    plotTileRef.current = tile;
+  }, [tile, height, syncKey]);
 
   useEffect(() => {
     build();
     const ro = new ResizeObserver(() => {
-      if (plotRef.current && containerRef.current) {
-        plotRef.current.setSize({ width: containerRef.current.offsetWidth, height });
-      }
+      const plot = plotRef.current;
+      const plotTile = plotTileRef.current;
+      const container = containerRef.current;
+      if (!plot || !plotTile || !container) return;
+      const width = container.offsetWidth || plot.width || 900;
+      plot.setSize({ width, height });
+      const built = uplotData(plotTile, currentTimeRef.current, width);
+      plot.setData(built.data, false);
+      plot.redraw();
     });
     if (containerRef.current) ro.observe(containerRef.current);
     return () => {
       ro.disconnect();
       plotRef.current?.destroy();
       plotRef.current = null;
+      plotTileRef.current = null;
     };
   }, [build, height]);
 
