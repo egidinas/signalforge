@@ -33,7 +33,7 @@ describe("markers", () => {
 
     const readouts = legendReadouts(graphTile, [{ id: "temp", label: "Temperature" }], 0);
 
-    expect(readouts.get("temp")).toBe("21.3 degC");
+    expect(readouts.get("temp")).toBe("21.3 °C");
   });
 
   it("treats placeholder units as missing in legend readouts", () => {
@@ -45,7 +45,7 @@ describe("markers", () => {
       axis_id: "temperature_c",
       unit: "_",
       points: [],
-    }, 21.25)).toBe("21.3 degC");
+    }, 21.25)).toBe("21.3 °C");
   });
 
   it("formats normalized loose Celsius units through the canonical temperature axis", () => {
@@ -61,7 +61,7 @@ describe("markers", () => {
     const readouts = legendReadouts(graphTile, [{ id: "temp", label: "Temperature" }], 0);
 
     expect(graphTile.series[0].axis_id).toBe("temperature_c");
-    expect(readouts.get("temp")).toBe("21.3 degC");
+    expect(readouts.get("temp")).toBe("21.3 °C");
   });
 
   it("does not report interpolated values inside command center visual gaps", () => {
@@ -101,7 +101,7 @@ describe("markers", () => {
     const staleCursor = Date.parse("2024-01-01T02:11:00.000Z");
 
     expect(rawValueAt(series, freshCursor, graphTile)).toBe(21);
-    expect(legendReadouts(graphTile, [{ id: "actual", label: "Actual" }], freshCursor).get("actual")).toBe("21.0 degC");
+    expect(legendReadouts(graphTile, [{ id: "actual", label: "Actual" }], freshCursor).get("actual")).toBe("21.0 °C");
     expect(rawValueAt(series, staleCursor, graphTile)).toBeUndefined();
   });
 

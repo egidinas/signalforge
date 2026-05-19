@@ -16,6 +16,8 @@ export type {
   SemanticValueQuality, SemanticValueCounterpart, SemanticValueHoverMeta,
   RouteState, RouteCandidate, RouteRedundancyContract,
   JsonSignalCatalogue, JsonSignalCatalogueEntry,
+  SourceCatalogue, SourceCatalogueCapabilities, SourceCatalogueEntry, SourceCatalogueTransportPath,
+  SemanticOverlayBundle, SemanticOverlayEntry, SemanticOverlayTarget, SemanticOverlayStoreOptions,
   // Signal catalogue
   SemanticSignal, Channel,
   // Adapter interfaces
@@ -27,6 +29,45 @@ export { loadAssignments, saveAssignments, makeAssignment, useAssignments } from
 export type { AssignmentsHandle } from "./dict/useAssignments";
 export { normalizeJsonSignalCatalogue } from "./catalogue/json";
 export type { JsonSignalCatalogueInput } from "./catalogue/json";
+export {
+  CURRENT_SOURCE_PROJECTION_SCHEMA_VERSION,
+  buildSignalProjectionTree,
+  normalizeSignalProjectionBundle,
+  signalProjectionPathKey,
+  signalProjectionRefKey,
+  validateSignalProjectionBundle,
+} from "./catalogue/projection";
+export type {
+  SignalProjectionBundle,
+  SignalProjectionBundleInput,
+  SignalProjectionMapping,
+  SignalProjectionMappingInput,
+  SignalProjectionMappingKind,
+  SignalProjectionPathSegment,
+  SignalProjectionPathSegmentInput,
+  SignalProjectionSignalID,
+  SignalProjectionSignalRef,
+  SignalProjectionSourceCatalogueEntryLike,
+  SignalProjectionSourceCatalogueLike,
+  SignalProjectionSourceFamily,
+  SignalProjectionTreeNode,
+  SignalProjectionValidationIssue,
+  SignalProjectionValidationOptions,
+  SignalProjectionValidationResult,
+} from "./catalogue/projection";
+export {
+  semanticOverlayTargetKey,
+  channelSemanticTarget,
+  normalizeSemanticOverlayEntry,
+  normalizeSemanticOverlayBundle,
+  overlayEntryForTarget,
+  upsertSemanticOverlayEntry,
+  removeSemanticOverlayEntry,
+  loadSemanticOverlay,
+  saveSemanticOverlay,
+  useSemanticOverlay,
+} from "./catalogue/semanticOverlay";
+export type { SemanticOverlayHandle } from "./catalogue/semanticOverlay";
 export { loadWalls, saveWalls, useWalls } from "./walls/useWalls";
 export type { WallsHandle } from "./walls/useWalls";
 export { useTileSeries } from "./tiles/useTileSeries";
@@ -62,6 +103,7 @@ export {
   seriesRoleColor,
   measuredElementSize,
   measuredElementWidth,
+  graphSeriesIdentityKey,
   emptyGraphTile,
   renderSeriesFromGraphTile,
   normalizeGraphTile,
@@ -72,6 +114,7 @@ export {
   timeTicks,
   chooseTickStep,
   tickLabel,
+  zoomRangeAroundAnchor,
   TimeAxisTrack,
   HeroTopTimeAxis,
   SharedTimeAxis,
@@ -129,6 +172,14 @@ export {
 
 // UI fundamentals
 export { SF_UI_CLASSNAMES, SF_UI_TOKENS } from "./ui/fundamentals";
+export { Sparkline } from "./ui/Sparkline";
+export type { SparklineProps } from "./ui/Sparkline";
+export { WriteLifecycleTrace } from "./ui/WriteLifecycleTrace";
+export type { WriteLifecycleTraceProps, WriteLifecyclePhase } from "./ui/WriteLifecycleTrace";
+export { HistoryController } from "./ui/HistoryController";
+export type { HistoryControllerProps, HistoryRange, HistoryAvailability } from "./ui/HistoryController";
+export { SemanticDiscoveryTree } from "./ui/SemanticDiscoveryTree";
+export type { SemanticDiscoveryNode, SemanticDiscoveryTreeProps } from "./ui/SemanticDiscoveryTree";
 
 // React components
 export { SignalDictionary } from "./dict/SignalDictionary";

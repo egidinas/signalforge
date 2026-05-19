@@ -275,7 +275,7 @@ export function ySplits(min: number, max: number) {
 }
 
 export function axisLabel(scale: string, _tile: GraphTile) {
-  if (scale === "temperature_c") return "degC";
+  if (scale === "temperature_c") return "°C";
   if (scale === "pressure_log") return "log10 mbar";
   if (scale === "pressure_rate_log") return "log10 mbar/min";
   if (scale === "pressure_mbar") return "mbar";

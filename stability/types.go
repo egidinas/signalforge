@@ -13,31 +13,50 @@ const (
 )
 
 type Criteria struct {
-	MaxStdDevC        float64            `json:"max_stddev_c"`
-	MaxRangeC         float64            `json:"max_range_c"`
-	MaxSlopeCPerHour  float64            `json:"max_slope_c_per_hour"`
-	TargetC           *float64           `json:"target_c,omitempty"`
-	MaxDeviationC     *float64           `json:"max_deviation_c,omitempty"`
-	Metadata          map[string]string  `json:"metadata,omitempty"`
-	BreachThresholds  map[string]float64 `json:"breach_thresholds,omitempty"`
-	ApproachThreshold float64            `json:"approach_threshold,omitempty"`
+	MaxStdDevC             float64            `json:"max_stddev_c,omitempty"`
+	MaxRangeC              float64            `json:"max_range_c,omitempty"`
+	MaxAbsChange           float64            `json:"max_abs_change,omitempty"`
+	MaxSpan                float64            `json:"max_span,omitempty"`
+	MaxSlopeCPerHour       float64            `json:"max_slope_c_per_hour,omitempty"`
+	TargetC                *float64           `json:"target_c,omitempty"`
+	MaxDeviationC          *float64           `json:"max_deviation_c,omitempty"`
+	MaxDeviationFromTarget float64            `json:"max_deviation_from_target,omitempty"`
+	Metadata               map[string]string  `json:"metadata,omitempty"`
+	BreachThresholds       map[string]float64 `json:"breach_thresholds,omitempty"`
+	ApproachThreshold      float64            `json:"approach_threshold,omitempty"`
 }
 
 type WindowConfig struct {
 	Name     string        `json:"name"`
 	Duration time.Duration `json:"duration"`
-	Criteria Criteria      `json:"criteria"`
+	Warn     Criteria      `json:"warn,omitempty"`
+	Gate     Criteria      `json:"gate,omitempty"`
+	Criteria Criteria      `json:"criteria,omitempty"` // Legacy/Default criteria
 }
 
+type GroupPolicyMode string
+
+const (
+	PolicyAllMustPass GroupPolicyMode = "all_must_pass"
+	PolicyAnyMustPass GroupPolicyMode = "any_must_pass"
+	PolicySpread      GroupPolicyMode = "spread"
+	PolicyNofM        GroupPolicyMode = "n_of_m"
+)
+
 type GroupPolicy struct {
-	RequiredStable int `json:"required_stable"`
-	TotalSignals   int `json:"total_signals"`
+	Mode           GroupPolicyMode `json:"mode"`
+	RequiredStable int             `json:"required_stable"`
+	TotalSignals   int             `json:"total_signals"`
+	MaxGroupSpread float64         `json:"max_group_spread,omitempty"`
 }
 
 type Config struct {
-	Signals     []string       `json:"signals"`
-	Windows     []WindowConfig `json:"windows"`
-	GroupPolicy GroupPolicy    `json:"group_policy"`
+	ID             string         `json:"id"`
+	Description    string         `json:"description,omitempty"`
+	Signals        []string       `json:"signals"`
+	TargetSignalID string         `json:"target_signal_id,omitempty"`
+	Windows        []WindowConfig `json:"windows"`
+	GroupPolicy    GroupPolicy    `json:"group_policy"`
 }
 
 type WindowStats struct {
@@ -47,9 +66,12 @@ type WindowStats struct {
 	Min               float64         `json:"min"`
 	Max               float64         `json:"max"`
 	Range             float64         `json:"range"`
+	Span              float64         `json:"span"`
 	SlopeCPerHour     float64         `json:"slope_c_per_hour"`
 	DeviationC        *float64        `json:"deviation_c,omitempty"`
 	Status            StabilityStatus `json:"status"`
+	GatePass          bool            `json:"gate_pass"`
+	WarnPass          bool            `json:"warn_pass"`
 	FirstTimestamp    time.Time       `json:"first_timestamp"`
 	LastTimestamp     time.Time       `json:"last_timestamp"`
 	InsufficientUntil *time.Time      `json:"insufficient_until,omitempty"`
@@ -189,6 +211,11 @@ func NewMonitor(config Config) *Monitor {
 	buffers := make(map[string]*RollingBuffer, len(config.Signals))
 	for _, signal := range config.Signals {
 		buffers[signal] = NewRollingBuffer(maxHorizon)
+	}
+	if config.TargetSignalID != "" {
+		if _, ok := buffers[config.TargetSignalID]; !ok {
+			buffers[config.TargetSignalID] = NewRollingBuffer(maxHorizon)
+		}
 	}
 	return &Monitor{config: config, buffers: buffers}
 }

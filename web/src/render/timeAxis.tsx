@@ -22,7 +22,7 @@ export function clampRange(range: TimeRange, fullRange: TimeRange, minSpan: numb
   return { start: Math.round(start), end: Math.round(end) };
 }
 
-const TIME_GRID_TICK_COUNT_DEFAULT = 14;
+const TIME_GRID_TICK_COUNT_DEFAULT = 16;
 
 export function timeTicks(startISO: string, endISO: string, count: number) {
   const start = Date.parse(startISO);
@@ -67,6 +67,21 @@ export function tickLabel(date: Date, stepMs: number) {
   const time = date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
   if (stepMs < 24 * 60 * 60_000) return time;
   return `${date.toLocaleDateString(undefined, { month: "short", day: "2-digit" })} ${time}`;
+}
+
+export function zoomRangeAroundAnchor(timeRange: TimeRange, fullRange: TimeRange, factor: number, minSpan: number, anchorMs?: number): TimeRange {
+  const fullSpan = Math.max(1, fullRange.end - fullRange.start);
+  const viewSpan = Math.max(1, timeRange.end - timeRange.start);
+  const nextSpan = Math.max(minSpan, Math.min(fullSpan, viewSpan * factor));
+  const anchor = typeof anchorMs === "number" && Number.isFinite(anchorMs) && anchorMs >= timeRange.start && anchorMs <= timeRange.end
+    ? anchorMs
+    : (timeRange.start + timeRange.end) / 2;
+  const distanceToStart = Math.max(0, anchor - timeRange.start);
+  const anchorRatio = Math.max(0, Math.min(1, distanceToStart / viewSpan));
+  return clampRange({
+    start: Math.round(anchor - nextSpan * anchorRatio),
+    end: Math.round(anchor + nextSpan * (1 - anchorRatio)),
+  }, fullRange, minSpan);
 }
 
 export function TimeAxisTrack({ ticks, start, end, nowRatio, hoverTimeMs, peekTimeMs, compact }: { ticks: ReturnType<typeof timeTicks>; start: number; end: number; nowRatio?: number; hoverTimeMs?: number; peekTimeMs?: number; compact?: boolean }) {
@@ -134,9 +149,7 @@ export function SharedTimeAxis({
     "--time-axis-right": `${plotBounds.right}px`,
   } as CSSProperties) : undefined;
   const zoomBy = (factor: number) => {
-    const nextSpan = Math.max(minSpan, Math.min(fullSpan, viewSpan * factor));
-    const center = (timeRange.start + timeRange.end) / 2;
-    onTimeRange(clampRange({ start: Math.round(center - nextSpan / 2), end: Math.round(center + nextSpan / 2) }, fullRange, minSpan));
+    onTimeRange(zoomRangeAroundAnchor(timeRange, fullRange, factor, minSpan, currentTimeMs));
   };
   const setScroll = (value: number) => {
     const maxOffset = Math.max(0, fullSpan - viewSpan);

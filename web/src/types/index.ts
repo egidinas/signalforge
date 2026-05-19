@@ -215,6 +215,120 @@ export type JsonSignalCatalogue = {
   meta?: Record<string, unknown>;
 };
 
+export type SourceCatalogueTransportPath = {
+  path_id: string;
+  path_kind: string;
+  physical_transport?: string;
+  network_transport?: string;
+  endpoint?: string;
+  state?: string;
+  workflow?: string;
+  notes?: string[];
+};
+
+export type SourceCatalogueCapabilities = {
+  supports_live?: boolean;
+  supports_history?: boolean;
+  supports_metadata_only?: boolean;
+  max_signals?: number;
+  max_bytes_per_second?: number;
+  default_rate_hz?: number;
+  recommended_rate_hz?: number;
+  discovery_cadence_sec?: number;
+  subscription_endpoint?: string;
+  history_endpoint?: string;
+  live_subjects?: string[];
+  selection_required?: boolean;
+  polite_access_statement?: string;
+  transport_paths?: SourceCatalogueTransportPath[];
+};
+
+export type SourceCatalogueEntry = {
+  trace_id: string;
+  raw_name?: string;
+  display_name?: string;
+  unit?: string;
+  value_type?: string;
+  access?: string;
+  graph_source?: string;
+  graph_type?: string;
+  category?: string;
+  kind?: string;
+  role?: string;
+  group_key?: string;
+  group_label?: string;
+  instance_key?: string;
+  sort_key?: string;
+  counterpart_group?: string;
+  counterpart_trace_ids?: string[];
+  default_hint?: string;
+  static_info?: boolean;
+  semantic_status?: string;
+  source_subject?: string;
+  history_path?: string;
+  target_id?: string;
+  target_format?: string;
+  target_use?: string;
+  owner_kind?: string;
+  owner_node_id?: string;
+  owner_process_id?: number;
+  ownership_mode?: string;
+  discovery_badges?: string[];
+  target_metadata?: Record<string, string>;
+  metadata?: Record<string, string>;
+};
+
+export type SourceCatalogue = {
+  schema_version: number;
+  source_id: string;
+  source_family: string;
+  display_name?: string;
+  entries: SourceCatalogueEntry[];
+  capabilities?: SourceCatalogueCapabilities;
+};
+
+// User semantic overlays keep operator labels, notes, and local projections
+// separate from canonical signal catalogues.
+
+export type SemanticOverlayTarget = {
+  target_id?: string;
+  device_id?: string;
+  serial?: string;
+  channel?: string | number;
+  instance?: string | number;
+  signal_id?: string | number;
+  kind?: string;
+  group?: string;
+};
+
+export type SemanticOverlayEntry = {
+  id?: string;
+  target: SemanticOverlayTarget;
+  alias?: string;
+  label?: string;
+  note?: string;
+  fixture_note?: string;
+  hidden?: boolean;
+  tags?: string[];
+  source?: string;
+  author?: string;
+  updated_at?: string;
+  meta?: Record<string, unknown>;
+};
+
+export type SemanticOverlayBundle = {
+  schema_version?: string | number;
+  namespace?: string;
+  generated_at?: string;
+  entries: SemanticOverlayEntry[];
+  meta?: Record<string, unknown>;
+};
+
+export interface SemanticOverlayStoreOptions {
+  namespace: string;
+  storage?: Storage;
+}
+
 // ---- graph_tile.v1 types ----
 
 export type TilePoint = {

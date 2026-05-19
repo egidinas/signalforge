@@ -5,7 +5,10 @@
 - Proposed package: `github.com/egidinas/signalforge/dbcmeta`
 - Source path: internal DBC metadata helpers.
 - Public problem solved: Provide shared, public-safe DBC catalogue metadata and grouping helpers without private DBC files or deployment defaults.
-- Public API summary: DBC subset parser, CAN payload signal decoder, canonical DBC catalogue grouping, duplicate and semantic grouping summaries, per-message fingerprints, and observed-traffic ranking against catalogue candidates.
+- Public API summary: DBC subset parser, CAN payload signal decoder,
+  canonical DBC catalogue grouping, duplicate and semantic grouping summaries,
+  per-message fingerprints, observed-traffic ranking against catalogue
+  candidates, and DBC-to-`graphsem.SourceCatalogue` export.
 
 ## Clean-Room Review
 
@@ -27,7 +30,10 @@
 - Reviewer: migration backlog
 - Date: 2026-05-14
 - Decision: accepted-public-core
-- Notes: Seeded from the richer internal implementation. The public core is limited to parsing, catalogue grouping, message fingerprints, and observed-traffic ranking. UI evolution helpers, private DBC directories, source-catalogue adapters, and graph provenance adapters remain downstream work.
+- Notes: Seeded from the richer internal implementation. The public core covers
+  parsing, catalogue grouping, message fingerprints, observed-traffic ranking,
+  and source-catalogue export. UI evolution helpers, private DBC directories,
+  and graph provenance adapters remain downstream work.
 
 ## Extraction Result
 
@@ -39,5 +45,5 @@
 ## Deferred Work
 
 - Rewire bridge DBC metadata consumers through the public core.
-- Rewire source-catalogue and graph provenance adapters through the public core.
+- Rewire graph provenance adapters through the public core.
 - Add parity tests against scrubbed fixture outputs before archiving either legacy implementation.

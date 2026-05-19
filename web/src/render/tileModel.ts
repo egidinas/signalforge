@@ -52,6 +52,28 @@ export type MeasuredElementSize = {
 type LooseRecord = Record<string, unknown>;
 type LooseTileSeries = TileSeries & LooseRecord;
 
+export function graphSeriesIdentityKey(series: unknown): string {
+  const item = recordOrEmpty(series);
+  const source = recordOrEmpty(item.source_obj ?? item.source_ref ?? item.sourceRef ?? item.source);
+  const sourceDevice = source.device_id ?? source.deviceId ?? item.device_id ?? item.deviceId;
+  const sourceParam = source.param_id ?? source.paramId ?? item.param_id ?? item.paramId;
+  const sourceInstance = source.instance ?? item.instance ?? 1;
+  const deviceID = identityPart(sourceDevice);
+  const paramID = identityPart(sourceParam);
+  const instance = identityPart(sourceInstance, "1");
+  if (deviceID && paramID) {
+    return `${deviceID}:${paramID}:${instance}`;
+  }
+
+  const target = parseTargetId(item.target_id ?? item.targetId);
+  if (target) return `${target.device_id}:${target.param_id}:${target.instance}`;
+
+  const colon = parseColonKey(item.series_id ?? item.id ?? item.key);
+  if (colon) return `${colon.device_id}:${colon.param_id}:${colon.instance}`;
+
+  return text(item.series_id ?? item.id ?? item.key ?? item.target_id ?? item.targetId);
+}
+
 export function seriesRoleMeta(role?: string): SeriesRoleMeta {
   const key = role || "actual";
   const meta = SERIES_ROLE_META[key];
@@ -123,7 +145,7 @@ export function renderSeriesFromGraphTile(tile: unknown): RenderedTileSeries[] {
     const legacyRole = text(loose.seriesRole ?? (series.role === "command" ? "cmd" : series.role), "actual");
     const source = recordOrEmpty(loose.source_obj);
     return {
-      key: text(loose.series_id ?? series.id ?? loose.key ?? loose.target_id ?? loose.targetId ?? series.label, "series"),
+      key: graphSeriesIdentityKey(series) || "series",
       tileId: normalizedTile.tile_id || normalizedTile.id,
       targetId: loose.target_id ?? loose.targetId,
       label: series.label,
@@ -299,6 +321,31 @@ function normalizePoint(point: unknown): TilePoint[] {
   const timeMs = typeof rawTimestamp === "number" ? rawTimestamp : Date.parse(String(rawTimestamp || ""));
   if (!Number.isFinite(value) || !Number.isFinite(timeMs)) return [];
   return [{ timestamp: new Date(timeMs).toISOString(), value }];
+}
+
+function parseTargetId(value: unknown) {
+  const match = String(value || "").match(/^([^@]+)@([^/]+)\/([^/]+)$/);
+  if (!match) return null;
+  const paramID = identityPart(match[1]);
+  const deviceID = identityPart(match[2]);
+  const instance = identityPart(match[3], "1");
+  if (!deviceID || !paramID) return null;
+  return { param_id: paramID, device_id: deviceID, instance };
+}
+
+function parseColonKey(value: unknown) {
+  const parts = String(value || "").split(":");
+  if (parts.length < 3) return null;
+  const instance = identityPart(parts[parts.length - 1], "1");
+  const paramID = identityPart(parts[parts.length - 2]);
+  const deviceID = identityPart(parts.slice(0, -2).join(":"));
+  if (!deviceID || !paramID) return null;
+  return { device_id: deviceID, param_id: paramID, instance };
+}
+
+function identityPart(value: unknown, fallback = "") {
+  if (value === undefined || value === null || value === "") return fallback;
+  return String(value).trim() || fallback;
 }
 
 function historyFromSeries(series: TileSeries) {

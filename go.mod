@@ -4,6 +4,7 @@ go 1.22.7
 
 require (
 	github.com/apache/arrow-go/v18 v18.1.0
+	github.com/ebitengine/purego v0.10.0
 	github.com/parquet-go/parquet-go v0.25.1
 )
 

@@ -195,20 +195,26 @@ const (
 )
 
 type SemanticSignal struct {
-	SignalID       SignalID
-	CanonicalName  string
-	RawName        string
-	DisplayName    string
-	Subsystem      string
-	Category       SignalCategory
-	Kind           SignalKind
-	Unit           string
-	Role           SignalRole
-	SourceFamily   SourceFamily
-	Availability   Availability
-	SourceInstance string
-	DUTID          DUTID
-	DefaultHint    GraphHint
+	SignalID            SignalID
+	CanonicalName       string
+	RawName             string
+	DisplayName         string
+	Subsystem           string
+	Category            SignalCategory
+	Kind                SignalKind
+	Unit                string
+	Role                SignalRole
+	GroupKey            string
+	GroupLabel          string
+	InstanceKey         string
+	SortKey             string
+	CounterpartGroup    string
+	CounterpartTraceIDs []string
+	SourceFamily        SourceFamily
+	Availability        Availability
+	SourceInstance      string
+	DUTID               DUTID
+	DefaultHint         GraphHint
 }
 
 type SeriesSpec struct {

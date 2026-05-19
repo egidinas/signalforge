@@ -229,9 +229,9 @@ export function formatLegendValue(series: TileSeries, value: number) {
     const u = displayUnit(series.unit ?? series.units);
     return u ? `${Math.round(value).toLocaleString()} ${u}` : Math.round(value).toLocaleString();
   }
-  if (series.axis_id === "temperature_c") return `${value.toFixed(1)} degC`;
+  if (series.axis_id === "temperature_c") return `${value.toFixed(1)} °C`;
   if (series.axis_id === "percent") return `${value.toFixed(0)}%`;
-  if (unit === "degC") return `${value.toFixed(1)} degC`;
+  if (unit === "degC" || unit === "°C") return `${value.toFixed(1)} °C`;
   if (unit === "W") return `${value.toFixed(1)} W`;
   if (unit === "ms") return `${value.toFixed(1)} ms`;
   if (unit === "bar") return `${value.toFixed(2)} bar`;
@@ -257,7 +257,7 @@ export function formatPressure(value: number) {
 }
 
 export function unitForAxis(axisID?: string) {
-  if (axisID === "temperature_c") return "degC";
+  if (axisID === "temperature_c") return "°C";
   if (axisID === "pressure_log") return "mbar";
   if (axisID === "pressure_mbar") return "mbar";
   if (axisID === "power_w" || axisID === "heat_flux_w") return "W";

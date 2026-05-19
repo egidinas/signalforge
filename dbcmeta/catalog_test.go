@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/egidinas/signalforge/graphsem"
 )
 
 func TestLoadDirBuildsCanonicalCandidates(t *testing.T) {
@@ -132,6 +134,60 @@ VAL_ 100 mode 0 "off" 1 "on";
 	}
 	if got := DecodeSignal([]byte{1}, &msg.Signals[0]); got != 1 {
 		t.Fatalf("DecodeSignal = %v, want 1", got)
+	}
+}
+
+func TestSourceCatalogueFromFileExposesDBCSignals(t *testing.T) {
+	db, err := ParseBytes([]byte(`
+BO_ 291 Thermal_Status: 8 ECU
+ SG_ object_temperature : 0|16@1+ (0.1,-40) [-40|120] "degC" NODE
+ SG_ output_enabled : 16|1@1+ (1,0) [0|1] "" NODE
+VAL_ 291 output_enabled 0 "off" 1 "on";
+`))
+	if err != nil {
+		t.Fatalf("ParseBytes: %v", err)
+	}
+
+	catalogue, err := SourceCatalogueFromFile(db, SourceCatalogueOptions{
+		SourceID:    "thermal-can",
+		DisplayName: "Thermal CAN",
+		HistoryPath: "/api/history/thermal-can",
+		TransportPaths: []graphsem.TransportPath{{
+			PathID:            "kvaser",
+			PathKind:          "can",
+			PhysicalTransport: "usb-can",
+			State:             "hot",
+		}},
+	})
+	if err != nil {
+		t.Fatalf("SourceCatalogueFromFile: %v", err)
+	}
+
+	if catalogue.SourceFamily != graphsem.SourceFamilyCanDbc {
+		t.Fatalf("SourceFamily = %q, want %q", catalogue.SourceFamily, graphsem.SourceFamilyCanDbc)
+	}
+	if len(catalogue.Entries) != 2 {
+		t.Fatalf("expected 2 source rows, got %d", len(catalogue.Entries))
+	}
+	first := catalogue.Entries[0]
+	if first.TraceID != "can_dbc:0x123:Thermal_Status.object_temperature" {
+		t.Fatalf("unexpected trace id %q", first.TraceID)
+	}
+	if first.GroupKey != "can_dbc:0x123:Thermal_Status" || first.GroupLabel != "Thermal Status" || first.InstanceKey != "0x123" {
+		t.Fatalf("unexpected grouping: group_key=%q group_label=%q instance_key=%q", first.GroupKey, first.GroupLabel, first.InstanceKey)
+	}
+	if first.SortKey != "00000123.000.object_temperature" {
+		t.Fatalf("unexpected sort key %q", first.SortKey)
+	}
+	if first.Category != graphsem.CategoryThermal || first.Kind != graphsem.KindContinuous || first.DefaultHint != graphsem.HintLine {
+		t.Fatalf("unexpected semantic classification: category=%q kind=%q hint=%q", first.Category, first.Kind, first.DefaultHint)
+	}
+	second := catalogue.Entries[1]
+	if second.Kind != graphsem.KindBoolean || second.DefaultHint != graphsem.HintStep {
+		t.Fatalf("unexpected boolean classification: kind=%q hint=%q", second.Kind, second.DefaultHint)
+	}
+	if second.Metadata["value_table"] != "0=off;1=on" {
+		t.Fatalf("unexpected value table metadata %q", second.Metadata["value_table"])
 	}
 }
 

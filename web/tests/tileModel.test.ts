@@ -1,5 +1,6 @@
 import {
   CANONICAL_TILE_RENDERER,
+  graphSeriesIdentityKey,
   measuredElementSize,
   measuredElementWidth,
   normalizeGraphTile,
@@ -92,11 +93,34 @@ describe("tileModel", () => {
       },
     });
     expect(renderSeriesFromGraphTile(tile)[0]).toMatchObject({
+      key: "tec-1:1042:ch1",
       deviceId: "tec-1",
       paramId: "1042",
       instance: "ch1",
       signalId: "pressure.actual",
     });
+  });
+
+  it("builds collision-safe series identity from source, target, or exact ids", () => {
+    expect(graphSeriesIdentityKey({
+      id: "object-temp",
+      label: "Object temperature",
+      source_obj: { device_id: "tec-76", param_id: 1000, instance: 3 },
+    })).toBe("tec-76:1000:3");
+
+    expect(graphSeriesIdentityKey({
+      label: "Target temperature",
+      target_id: "3000@tec-76/1",
+    })).toBe("tec-76:3000:1");
+
+    expect(graphSeriesIdentityKey({
+      label: "Object temperature",
+      series_id: "tec-75:1000:1",
+    })).toBe("tec-75:1000:1");
+
+    expect(graphSeriesIdentityKey({
+      label: "Object temperature",
+    })).toBe("");
   });
 
   it("derives fallback time bounds from span-only series", () => {

@@ -10,18 +10,24 @@ func TestSourceCatalogueValidateAndResolveSelection(t *testing.T) {
 		DisplayName:   "Fixture source",
 		Entries: []SourceCatalogueRow{
 			{
-				TraceID:       "fixture.channel_01.temperature_c",
-				RawName:       "TEMP_CH1",
-				DisplayName:   "Channel 01 temperature",
-				Unit:          "degC",
-				ValueType:     "float",
-				Access:        "subscribe",
-				GraphType:     "line",
-				Category:      CategoryThermal,
-				Kind:          KindContinuous,
-				Role:          RoleMonitor,
-				DefaultHint:   HintLine,
-				SourceSubject: "telemetry.fixture.temperature",
+				TraceID:             "fixture.channel_01.temperature_c",
+				RawName:             "TEMP_CH1",
+				DisplayName:         "Channel 01 temperature",
+				Unit:                "degC",
+				ValueType:           "float",
+				Access:              "subscribe",
+				GraphType:           "line",
+				Category:            CategoryThermal,
+				Kind:                KindContinuous,
+				Role:                RoleMonitor,
+				GroupKey:            "fixture/channel:1",
+				GroupLabel:          "Fixture channel 1",
+				InstanceKey:         "channel:1",
+				SortKey:             "001.temperature",
+				CounterpartGroup:    "fixture.channel_01.loop",
+				CounterpartTraceIDs: []string{"fixture.channel_01.target"},
+				DefaultHint:         HintLine,
+				SourceSubject:       "telemetry.fixture.temperature",
 			},
 			{
 				TraceID:     "fixture.channel_01.state",
@@ -76,6 +82,12 @@ func TestSourceCatalogueValidateAndResolveSelection(t *testing.T) {
 	}
 	if signal.SourceFamily != SourceFamilyMeComTec || signal.Category != CategoryThermal || signal.DefaultHint != HintLine {
 		t.Fatalf("semantic fields = %#v", signal)
+	}
+	if signal.GroupKey != "fixture/channel:1" || signal.GroupLabel != "Fixture channel 1" || signal.InstanceKey != "channel:1" {
+		t.Fatalf("grouping fields = %#v", signal)
+	}
+	if signal.CounterpartGroup != "fixture.channel_01.loop" || len(signal.CounterpartTraceIDs) != 1 || signal.CounterpartTraceIDs[0] != "fixture.channel_01.target" {
+		t.Fatalf("counterpart fields = %#v", signal)
 	}
 }
 

@@ -54,32 +54,38 @@ type TransportPath struct {
 }
 
 type SourceCatalogueRow struct {
-	TraceID         string            `json:"trace_id"`
-	RawName         string            `json:"raw_name,omitempty"`
-	DisplayName     string            `json:"display_name,omitempty"`
-	Unit            string            `json:"unit,omitempty"`
-	ValueType       string            `json:"value_type,omitempty"`
-	Access          string            `json:"access,omitempty"`
-	GraphSource     string            `json:"graph_source,omitempty"`
-	GraphType       string            `json:"graph_type,omitempty"`
-	Category        SignalCategory    `json:"category,omitempty"`
-	Kind            SignalKind        `json:"kind,omitempty"`
-	Role            SignalRole        `json:"role,omitempty"`
-	DefaultHint     GraphHint         `json:"default_hint,omitempty"`
-	StaticInfo      bool              `json:"static_info,omitempty"`
-	SemanticStatus  string            `json:"semantic_status,omitempty"`
-	SourceSubject   string            `json:"source_subject,omitempty"`
-	HistoryPath     string            `json:"history_path,omitempty"`
-	TargetID        string            `json:"target_id,omitempty"`
-	TargetFormat    string            `json:"target_format,omitempty"`
-	TargetUse       string            `json:"target_use,omitempty"`
-	OwnerKind       string            `json:"owner_kind,omitempty"`
-	OwnerNodeID     string            `json:"owner_node_id,omitempty"`
-	OwnerProcessID  int               `json:"owner_process_id,omitempty"`
-	OwnershipMode   string            `json:"ownership_mode,omitempty"`
-	DiscoveryBadges []string          `json:"discovery_badges,omitempty"`
-	TargetMetadata  map[string]string `json:"target_metadata,omitempty"`
-	Metadata        map[string]string `json:"metadata,omitempty"`
+	TraceID             string            `json:"trace_id"`
+	RawName             string            `json:"raw_name,omitempty"`
+	DisplayName         string            `json:"display_name,omitempty"`
+	Unit                string            `json:"unit,omitempty"`
+	ValueType           string            `json:"value_type,omitempty"`
+	Access              string            `json:"access,omitempty"`
+	GraphSource         string            `json:"graph_source,omitempty"`
+	GraphType           string            `json:"graph_type,omitempty"`
+	Category            SignalCategory    `json:"category,omitempty"`
+	Kind                SignalKind        `json:"kind,omitempty"`
+	Role                SignalRole        `json:"role,omitempty"`
+	GroupKey            string            `json:"group_key,omitempty"`
+	GroupLabel          string            `json:"group_label,omitempty"`
+	InstanceKey         string            `json:"instance_key,omitempty"`
+	SortKey             string            `json:"sort_key,omitempty"`
+	CounterpartGroup    string            `json:"counterpart_group,omitempty"`
+	CounterpartTraceIDs []string          `json:"counterpart_trace_ids,omitempty"`
+	DefaultHint         GraphHint         `json:"default_hint,omitempty"`
+	StaticInfo          bool              `json:"static_info,omitempty"`
+	SemanticStatus      string            `json:"semantic_status,omitempty"`
+	SourceSubject       string            `json:"source_subject,omitempty"`
+	HistoryPath         string            `json:"history_path,omitempty"`
+	TargetID            string            `json:"target_id,omitempty"`
+	TargetFormat        string            `json:"target_format,omitempty"`
+	TargetUse           string            `json:"target_use,omitempty"`
+	OwnerKind           string            `json:"owner_kind,omitempty"`
+	OwnerNodeID         string            `json:"owner_node_id,omitempty"`
+	OwnerProcessID      int               `json:"owner_process_id,omitempty"`
+	OwnershipMode       string            `json:"ownership_mode,omitempty"`
+	DiscoveryBadges     []string          `json:"discovery_badges,omitempty"`
+	TargetMetadata      map[string]string `json:"target_metadata,omitempty"`
+	Metadata            map[string]string `json:"metadata,omitempty"`
 }
 
 type DiscoveredCatalogueRecord struct {
@@ -382,20 +388,26 @@ func (s SelectedSignal) resolve(c SourceCatalogue, entry SourceCatalogueRow) Sem
 	canonicalName := firstNonEmpty(s.CanonicalName, entry.RawName, entry.TraceID, string(s.SignalID))
 	displayName := firstNonEmpty(s.DisplayName, entry.DisplayName, entry.RawName, entry.TraceID, string(s.SignalID))
 	return SemanticSignal{
-		SignalID:       s.SignalID,
-		CanonicalName:  canonicalName,
-		RawName:        firstNonEmpty(entry.RawName, entry.TraceID),
-		DisplayName:    displayName,
-		Subsystem:      s.Subsystem,
-		Category:       firstCategory(s.Category, entry.Category),
-		Kind:           firstKind(s.Kind, entry.Kind),
-		Unit:           firstNonEmpty(s.Unit, entry.Unit),
-		Role:           firstRole(s.Role, entry.Role),
-		SourceFamily:   c.SourceFamily,
-		Availability:   availability,
-		SourceInstance: firstNonEmpty(s.SourceInstance, c.SourceID),
-		DUTID:          s.DUTID,
-		DefaultHint:    firstHint(s.DefaultHint, entry.DefaultHint),
+		SignalID:            s.SignalID,
+		CanonicalName:       canonicalName,
+		RawName:             firstNonEmpty(entry.RawName, entry.TraceID),
+		DisplayName:         displayName,
+		Subsystem:           s.Subsystem,
+		Category:            firstCategory(s.Category, entry.Category),
+		Kind:                firstKind(s.Kind, entry.Kind),
+		Unit:                firstNonEmpty(s.Unit, entry.Unit),
+		Role:                firstRole(s.Role, entry.Role),
+		GroupKey:            entry.GroupKey,
+		GroupLabel:          entry.GroupLabel,
+		InstanceKey:         entry.InstanceKey,
+		SortKey:             entry.SortKey,
+		CounterpartGroup:    entry.CounterpartGroup,
+		CounterpartTraceIDs: append([]string(nil), entry.CounterpartTraceIDs...),
+		SourceFamily:        c.SourceFamily,
+		Availability:        availability,
+		SourceInstance:      firstNonEmpty(s.SourceInstance, c.SourceID),
+		DUTID:               s.DUTID,
+		DefaultHint:         firstHint(s.DefaultHint, entry.DefaultHint),
 	}
 }
 
