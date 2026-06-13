@@ -622,6 +622,7 @@ type GraphWallSignal struct {
 	Category     string            `json:"category"`
 	Role         string            `json:"role"`
 	Subsystem    string            `json:"subsystem"`
+	Color        string            `json:"color,omitempty"`
 	AxisID       string            `json:"axis_id,omitempty"`
 	SectionID    string            `json:"section_id"`
 	ValueTable   map[string]string `json:"value_table,omitempty"`

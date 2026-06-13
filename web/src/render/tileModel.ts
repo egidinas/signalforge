@@ -137,6 +137,31 @@ export function emptyGraphTile(opts: LooseRecord = {}): GraphTile {
   };
 }
 
+export type RetainGraphTileOptions = {
+  readonly inViewport?: boolean;
+};
+
+export function hasRenderableGraphTile(tile: unknown): boolean {
+  if (!isRecord(tile)) return false;
+  if (Array.isArray(tile.series) && tile.series.length > 0) return true;
+  if (Array.isArray(tile.bands) && tile.bands.length > 0) return true;
+  if (Array.isArray(tile.markers) && tile.markers.length > 0) return true;
+  if (Array.isArray(tile.events) && tile.events.length > 0) return true;
+  const diagnostics = recordOrEmpty(tile.diagnostics);
+  const seriesCount = numberOrUndefined(diagnostics.series_count ?? diagnostics.seriesCount);
+  return Boolean(seriesCount && seriesCount > 0);
+}
+
+export function retainGraphTile<TileLike>(
+  nextTile: TileLike,
+  previousTile: TileLike | null | undefined,
+  opts: RetainGraphTileOptions = {},
+): TileLike | null | undefined {
+  if (hasRenderableGraphTile(nextTile)) return nextTile;
+  if (opts.inViewport !== false && hasRenderableGraphTile(previousTile)) return previousTile;
+  return nextTile;
+}
+
 export function renderSeriesFromGraphTile(tile: unknown): RenderedTileSeries[] {
   if (!isRecord(tile) || !Array.isArray(tile.series)) return [];
   const normalizedTile = normalizeGraphTile(tile);

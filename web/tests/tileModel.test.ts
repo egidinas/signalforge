@@ -1,10 +1,13 @@
 import {
   CANONICAL_TILE_RENDERER,
+  emptyGraphTile,
   graphSeriesIdentityKey,
+  hasRenderableGraphTile,
   measuredElementSize,
   measuredElementWidth,
   normalizeGraphTile,
   renderSeriesFromGraphTile,
+  retainGraphTile,
   seriesRoleMeta,
 } from "../src/render/tileModel";
 
@@ -330,5 +333,40 @@ describe("tileModel", () => {
     expect(measuredElementSize(fallbackEl)).toEqual({ width: 384, height: 216 });
     expect(measuredElementWidth(fallbackEl)).toBe(384);
     expect(measuredElementSize(null)).toEqual({ width: 0, height: 0 });
+  });
+
+  it("classifies graph tiles with renderable content", () => {
+    const empty = emptyGraphTile({ tile_id: "empty" });
+    const withDiagnostics = {
+      ...empty,
+      diagnostics: { ...empty.diagnostics, series_count: 1 },
+    };
+    const withMarker = {
+      ...empty,
+      markers: [{ id: "m1", label: "Mark", kind: "note", timestamp: "2024-01-01T00:00:00Z" }],
+    };
+
+    expect(hasRenderableGraphTile(empty)).toBe(false);
+    expect(hasRenderableGraphTile(withDiagnostics)).toBe(true);
+    expect(hasRenderableGraphTile(withMarker)).toBe(true);
+  });
+
+  it("retains the last renderable tile while the graph remains in view", () => {
+    const previous = normalizeGraphTile({
+      id: "served",
+      card_id: "served",
+      series: [
+        {
+          id: "actual",
+          label: "Actual",
+          points: [{ timestamp: "2024-01-01T00:00:00Z", value: 21.5 }],
+        },
+      ],
+    });
+    const empty = emptyGraphTile({ tile_id: "served" });
+
+    expect(retainGraphTile(empty, previous, { inViewport: true })).toBe(previous);
+    expect(retainGraphTile(empty, previous, { inViewport: false })).toBe(empty);
+    expect(retainGraphTile(previous, empty, { inViewport: true })).toBe(previous);
   });
 });

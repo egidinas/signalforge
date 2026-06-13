@@ -153,7 +153,7 @@ VAL_ 291 output_enabled 0 "off" 1 "on";
 		DisplayName: "Thermal CAN",
 		HistoryPath: "/api/history/thermal-can",
 		TransportPaths: []graphsem.TransportPath{{
-			PathID:            "kvaser",
+			PathID:            "usb-adapter",
 			PathKind:          "can",
 			PhysicalTransport: "usb-can",
 			State:             "hot",

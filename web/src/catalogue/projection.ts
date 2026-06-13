@@ -3,12 +3,17 @@ export type SignalProjectionSignalID = string | number;
 export const CURRENT_SOURCE_PROJECTION_SCHEMA_VERSION = 1;
 
 export type SignalProjectionSourceFamily =
-  | "mecom_tec"
-  | "tec"
   | "opcua"
   | "can_dbc"
+  | "thermal_chamber"
+  | "huber_unistat"
+  | "lab_instruments"
   | "ni_shared_variable"
   | "niagara"
+  | "tmtc"
+  | "historical_tdms"
+  | "historical_hdf5"
+  | "data_lens"
   | "derived"
   | "other_discovered"
   | string;

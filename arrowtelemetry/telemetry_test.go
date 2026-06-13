@@ -86,6 +86,77 @@ func TestWriteCampaignProducesCanonicalArrowRows(t *testing.T) {
 	assertParquetNullParity(t, strings.TrimSuffix(path, ".arrow")+".parquet")
 }
 
+func TestWriteCampaignEmitsKnownMetadataBeforeSortedUnknowns(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "telemetry.arrow")
+	samples := []contracts.TelemetrySample{{
+		Timestamp: "2026-01-15T10:00:00Z",
+		Signals: map[string]float64{
+			"z_unknown_signal": 4,
+			"b_known_signal":   2,
+			"a_unknown_signal": 3,
+			"a_known_signal":   1,
+		},
+		States: map[string]string{
+			"z_unknown_state": "z",
+			"b_known_state":   "b",
+			"a_unknown_state": "a",
+			"a_known_state":   "a",
+		},
+		Quality: "fresh",
+	}}
+	meta := map[string]SignalMeta{
+		"a_known_signal": {Unit: "V", SignalKind: "measurement"},
+		"b_known_signal": {Unit: "V", SignalKind: "measurement"},
+		"a_known_state":  {Unit: "state", SignalKind: "state"},
+		"b_known_state":  {Unit: "state", SignalKind: "state"},
+	}
+
+	ch := make(chan contracts.TelemetrySample, len(samples))
+	for _, s := range samples {
+		ch <- s
+	}
+	close(ch)
+	if err := WriteCampaign(path, "campaign", ch, meta); err != nil {
+		t.Fatalf("write campaign arrow: %v", err)
+	}
+
+	f, err := os.Open(path)
+	if err != nil {
+		t.Fatalf("open arrow: %v", err)
+	}
+	defer f.Close()
+	reader, err := ipc.NewReader(f)
+	if err != nil {
+		t.Fatalf("new reader: %v", err)
+	}
+	defer reader.Release()
+	if !reader.Next() {
+		t.Fatal("expected one record")
+	}
+	rec := reader.Record()
+	sensor := rec.Column(1).(*array.Dictionary)
+	got := make([]string, 0, rec.NumRows())
+	for i := 0; i < int(rec.NumRows()); i++ {
+		got = append(got, sensor.ValueStr(i))
+	}
+	want := []string{
+		"a_known_signal",
+		"b_known_signal",
+		"a_unknown_signal",
+		"z_unknown_signal",
+		"a_known_state",
+		"b_known_state",
+		"a_unknown_state",
+		"z_unknown_state",
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("sensor order = %#v, want %#v", got, want)
+		}
+	}
+}
+
 func TestWriteCampaignPreservesExistingArtifactsOnFailure(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "telemetry.arrow")

@@ -40,17 +40,17 @@
 
 ## Clean-Room Review
 
-- Private inputs excluded: No real OPC UA endpoints, DBC files, Meerstetter
+- Private inputs excluded: No real OPC UA endpoints, DBC files, hardware
   serial numbers, fixture labels, route defaults, or captured values are
   included.
 - Fixtures/examples included: Unit tests use synthetic MeCom IDs, a synthetic
   OPC UA NodeId, and a synthetic DBC signal reference.
-- Fixtures/examples rejected: No private Loom catalogues, real bus names, or
-  lab-specific UI projections were imported.
+- Fixtures/examples rejected: No private deployment catalogues, real bus names,
+  or lab-specific UI projections were imported.
 - Renames performed: The API is intentionally source-family neutral and uses
   `source_family`, `source_id`, `trace_id`, and `signal_id` instead of
   product-specific names.
-- Compatibility aliases needed: Downstream Meerstetter projection JSON can keep
+- Compatibility aliases needed: Existing downstream projection JSON can keep
   `primary_mappings`, `secondary_mappings`, `ids`, and `trace_ids`; the
   normalizer converts them into canonical `mappings` with `signal_refs`.
 

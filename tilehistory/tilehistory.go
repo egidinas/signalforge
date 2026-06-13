@@ -3,6 +3,7 @@ package tilehistory
 import (
 	"math"
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -51,10 +52,13 @@ type bucket struct {
 
 // History retains numeric samples in second-sized buckets.
 type History[T Number] struct {
+	mu             sync.RWMutex
 	interval       time.Duration
 	retention      time.Duration
 	maxBuckets     int
 	buckets        []bucket
+	bucketCount    int
+	head           int
 	droppedSamples int
 	anchor         time.Time
 	latest         time.Time
@@ -76,15 +80,16 @@ func NewWithInterval[T Number](interval, retention time.Duration) *History[T] {
 	maxBuckets := 0
 	if retention > 0 {
 		maxBuckets = int(retention / interval)
-		if maxBuckets == 0 {
-			maxBuckets = 1
-		}
+	}
+	var buckets []bucket
+	if maxBuckets > 0 {
+		buckets = make([]bucket, maxBuckets)
 	}
 	return &History[T]{
 		interval:   interval,
 		retention:  retention,
 		maxBuckets: maxBuckets,
-		buckets:    make([]bucket, 0, maxBuckets),
+		buckets:    buckets,
 	}
 }
 
@@ -93,15 +98,20 @@ func NewWithInterval[T Number](interval, retention time.Duration) *History[T] {
 // Non-finite values are rejected. Samples older than the currently retained
 // window are dropped rather than shifting the window backwards.
 func (h *History[T]) Add(sample Sample[T]) bool {
-	if math.IsNaN(toFloat64(sample.Value)) || math.IsInf(toFloat64(sample.Value), 0) {
+	value := toFloat64(sample.Value)
+	if math.IsNaN(value) || math.IsInf(value, 0) {
 		return false
 	}
 	ts := sample.Timestamp.UTC().Truncate(h.interval)
+
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
 	if h.maxBuckets == 0 {
 		h.droppedSamples++
 		return false
 	}
-	if !h.anchor.IsZero() && ts.Before(h.anchor.Add(-time.Duration(h.maxBuckets-1)*h.interval)) {
+	if !h.latest.IsZero() && ts.Before(h.windowStartLocked(h.latest)) {
 		h.droppedSamples++
 		return false
 	}
@@ -109,25 +119,32 @@ func (h *History[T]) Add(sample Sample[T]) bool {
 	if h.anchor.IsZero() {
 		h.anchor = ts
 	}
-	h.advanceLocked(ts)
-	idx := h.findBucket(ts)
-	if idx >= 0 {
-		h.addToBucket(idx, toFloat64(sample.Value))
+	h.advanceLocked()
+	idx, found := h.findBucket(ts)
+	if found {
+		h.addToBucket(idx, value)
 		return true
 	}
-	h.buckets = append(h.buckets, bucket{
+	next := bucket{
 		intervalStart: ts,
 		count:         1,
-		sum:           toFloat64(sample.Value),
-		min:           toFloat64(sample.Value),
-		max:           toFloat64(sample.Value),
-	})
-	h.sortAndTrimLocked()
+		sum:           value,
+		min:           value,
+		max:           value,
+	}
+	if !h.insertBucketLocked(idx, next) {
+		h.droppedSamples++
+		return false
+	}
+	h.refreshAnchorLocked()
 	return true
 }
 
 // Snapshot returns the current retained history in chronological order.
 func (h *History[T]) Snapshot() Snapshot {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
 	out := Snapshot{
 		Anchor:         h.anchor,
 		Interval:       h.interval,
@@ -135,13 +152,14 @@ func (h *History[T]) Snapshot() Snapshot {
 		DroppedSamples: h.droppedSamples,
 		Count:          0,
 	}
-	if len(h.buckets) == 0 {
+	if h.bucketCount == 0 {
 		return out
 	}
-	out.Earliest = h.buckets[0].intervalStart
-	out.Latest = h.buckets[len(h.buckets)-1].intervalStart
-	out.Buckets = make([]BucketSummary, 0, len(h.buckets))
-	for _, b := range h.buckets {
+	out.Earliest = h.bucketAt(0).intervalStart
+	out.Latest = h.bucketAt(h.bucketCount - 1).intervalStart
+	out.Buckets = make([]BucketSummary, 0, h.bucketCount)
+	for i := 0; i < h.bucketCount; i++ {
+		b := h.bucketAt(i)
 		out.Count += b.count
 		out.Buckets = append(out.Buckets, BucketSummary{
 			IntervalStart: b.intervalStart,
@@ -156,44 +174,74 @@ func (h *History[T]) Snapshot() Snapshot {
 }
 
 // Len reports the number of retained intervals.
-func (h *History[T]) Len() int { return len(h.buckets) }
+func (h *History[T]) Len() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.bucketCount
+}
 
 // DroppedSamples reports samples that were rejected because they were outside
 // the retained window or could not be represented.
-func (h *History[T]) DroppedSamples() int { return h.droppedSamples }
-
-// Interval returns the history cadence.
-func (h *History[T]) Interval() time.Duration { return h.interval }
-
-// Retention returns the configured retention window.
-func (h *History[T]) Retention() time.Duration { return h.retention }
-
-func (h *History[T]) advanceLocked(ts time.Time) {
-	if len(h.buckets) == 0 {
-		return
-	}
-	minStart := ts.Add(-time.Duration(h.maxBuckets-1) * h.interval)
-	i := 0
-	for i < len(h.buckets) && h.buckets[i].intervalStart.Before(minStart) {
-		h.droppedSamples += h.buckets[i].count
-		i++
-	}
-	if i > 0 {
-		h.buckets = append([]bucket(nil), h.buckets[i:]...)
-	}
+func (h *History[T]) DroppedSamples() int {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.droppedSamples
 }
 
-func (h *History[T]) findBucket(ts time.Time) int {
-	for i := range h.buckets {
-		if h.buckets[i].intervalStart.Equal(ts) {
-			return i
-		}
+// Interval returns the history cadence.
+func (h *History[T]) Interval() time.Duration {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.interval
+}
+
+// Retention returns the configured retention window.
+func (h *History[T]) Retention() time.Duration {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+	return h.retention
+}
+
+func (h *History[T]) advanceLocked() {
+	if h.bucketCount == 0 {
+		return
 	}
-	return -1
+	minStart := h.windowStartLocked(h.latest)
+	for h.bucketCount > 0 {
+		b := h.bucketAt(0)
+		if !b.intervalStart.Before(minStart) {
+			break
+		}
+		h.droppedSamples += b.count
+		*b = bucket{}
+		h.head = (h.head + 1) % h.maxBuckets
+		h.bucketCount--
+	}
+	if h.bucketCount == 0 {
+		h.head = 0
+	}
+	h.refreshAnchorLocked()
+}
+
+func (h *History[T]) findBucket(ts time.Time) (int, bool) {
+	if h.bucketCount == 0 {
+		return 0, false
+	}
+	last := h.bucketAt(h.bucketCount - 1).intervalStart
+	if ts.Equal(last) {
+		return h.bucketCount - 1, true
+	}
+	if ts.After(last) {
+		return h.bucketCount, false
+	}
+	idx := sort.Search(h.bucketCount, func(i int) bool {
+		return !h.bucketAt(i).intervalStart.Before(ts)
+	})
+	return idx, idx < h.bucketCount && h.bucketAt(idx).intervalStart.Equal(ts)
 }
 
 func (h *History[T]) addToBucket(idx int, value float64) {
-	b := &h.buckets[idx]
+	b := h.bucketAt(idx)
 	b.count++
 	b.sum += value
 	if value < b.min {
@@ -204,17 +252,65 @@ func (h *History[T]) addToBucket(idx int, value float64) {
 	}
 }
 
-func (h *History[T]) sortAndTrimLocked() {
-	sort.Slice(h.buckets, func(i, j int) bool {
-		return h.buckets[i].intervalStart.Before(h.buckets[j].intervalStart)
-	})
-	if h.maxBuckets > 0 && len(h.buckets) > h.maxBuckets {
-		excess := len(h.buckets) - h.maxBuckets
-		for i := 0; i < excess; i++ {
-			h.droppedSamples += h.buckets[i].count
-		}
-		h.buckets = append([]bucket(nil), h.buckets[excess:]...)
+func (h *History[T]) insertBucketLocked(idx int, next bucket) bool {
+	if h.maxBuckets == 0 {
+		return false
 	}
+	if h.bucketCount == 0 {
+		h.head = 0
+		h.buckets[0] = next
+		h.bucketCount = 1
+		return true
+	}
+	if idx == h.bucketCount {
+		if h.bucketCount == h.maxBuckets {
+			oldest := h.bucketAt(0)
+			h.droppedSamples += oldest.count
+			*oldest = bucket{}
+			h.head = (h.head + 1) % h.maxBuckets
+			h.bucketCount--
+		}
+		h.buckets[(h.head+h.bucketCount)%h.maxBuckets] = next
+		h.bucketCount++
+		return true
+	}
+	if h.bucketCount >= h.maxBuckets {
+		return false
+	}
+	h.linearizeLocked()
+	copy(h.buckets[idx+1:h.bucketCount+1], h.buckets[idx:h.bucketCount])
+	h.buckets[idx] = next
+	h.bucketCount++
+	return true
+}
+
+func (h *History[T]) linearizeLocked() {
+	if h.head == 0 || h.bucketCount <= 1 {
+		h.head = 0
+		return
+	}
+	ordered := make([]bucket, h.bucketCount)
+	for i := 0; i < h.bucketCount; i++ {
+		ordered[i] = *h.bucketAt(i)
+	}
+	copy(h.buckets, ordered)
+	h.head = 0
+}
+
+func (h *History[T]) bucketAt(logical int) *bucket {
+	return &h.buckets[(h.head+logical)%h.maxBuckets]
+}
+
+func (h *History[T]) refreshAnchorLocked() {
+	if h.bucketCount == 0 {
+		h.anchor = time.Time{}
+		return
+	}
+	h.anchor = h.bucketAt(0).intervalStart
+}
+
+func (h *History[T]) windowStartLocked(latest time.Time) time.Time {
+	return latest.Add(-time.Duration(h.maxBuckets-1) * h.interval)
 }
 
 func toFloat64[T Number](value T) float64 {

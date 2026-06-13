@@ -30,7 +30,7 @@ func (m *Monitor) AddSignal(signal string) {
 func (m *Monitor) Evaluate(now time.Time) State {
 	signalStates := make(map[string]SignalState, len(m.buffers))
 	stableSignals := 0
-	
+
 	// Handle Target Setpoint for deviation checks
 	var targetSetpoint float64
 	hasTarget := false
@@ -70,7 +70,7 @@ func (m *Monitor) Evaluate(now time.Time) State {
 
 	total := len(signalStates)
 	overall := StatusStable
-	
+
 	// Apply Group Policy
 	switch m.config.GroupPolicy.Mode {
 	case PolicyAllMustPass:
@@ -190,7 +190,7 @@ func evaluateWindow(buffer *RollingBuffer, now time.Time, window WindowConfig, t
 			samples = append(samples, StabilityEvent{Timestamp: point.t, Value: point.v})
 		}
 	}
-	
+
 	if len(samples) == 0 || buffer == nil || len(buffer.points) == 0 || buffer.points[0].t.After(cutoff) {
 		insufficientUntil := cutoff.Add(window.Duration)
 		return WindowStats{
@@ -219,9 +219,9 @@ func evaluateWindow(buffer *RollingBuffer, now time.Time, window WindowConfig, t
 	mean := sum / float64(len(samples))
 	std := finiteOrZero(stddev(values, mean))
 	valueRange := maxValue - minValue
-	span := maxValue - minValue // Same as range for now
+	span := maxValue - minValue                 // Same as range for now
 	_, slope := EvaluateLinearDrift(samples, 0) // Just get the slope
-	
+
 	stats := WindowStats{
 		Count:          len(samples),
 		Mean:           mean,

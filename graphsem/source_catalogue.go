@@ -12,6 +12,7 @@ type SourceCatalogue struct {
 	SourceID      string               `json:"source_id"`
 	SourceFamily  SourceFamily         `json:"source_family"`
 	DisplayName   string               `json:"display_name,omitempty"`
+	DefinitionRef string               `json:"definition_ref,omitempty"`
 	Page          CataloguePage        `json:"page,omitempty"`
 	Entries       []SourceCatalogueRow `json:"entries"`
 	Capabilities  SourceCapabilities   `json:"capabilities,omitempty"`
@@ -54,38 +55,45 @@ type TransportPath struct {
 }
 
 type SourceCatalogueRow struct {
-	TraceID             string            `json:"trace_id"`
-	RawName             string            `json:"raw_name,omitempty"`
-	DisplayName         string            `json:"display_name,omitempty"`
-	Unit                string            `json:"unit,omitempty"`
-	ValueType           string            `json:"value_type,omitempty"`
-	Access              string            `json:"access,omitempty"`
-	GraphSource         string            `json:"graph_source,omitempty"`
-	GraphType           string            `json:"graph_type,omitempty"`
-	Category            SignalCategory    `json:"category,omitempty"`
-	Kind                SignalKind        `json:"kind,omitempty"`
-	Role                SignalRole        `json:"role,omitempty"`
-	GroupKey            string            `json:"group_key,omitempty"`
-	GroupLabel          string            `json:"group_label,omitempty"`
-	InstanceKey         string            `json:"instance_key,omitempty"`
-	SortKey             string            `json:"sort_key,omitempty"`
-	CounterpartGroup    string            `json:"counterpart_group,omitempty"`
-	CounterpartTraceIDs []string          `json:"counterpart_trace_ids,omitempty"`
-	DefaultHint         GraphHint         `json:"default_hint,omitempty"`
-	StaticInfo          bool              `json:"static_info,omitempty"`
-	SemanticStatus      string            `json:"semantic_status,omitempty"`
-	SourceSubject       string            `json:"source_subject,omitempty"`
-	HistoryPath         string            `json:"history_path,omitempty"`
-	TargetID            string            `json:"target_id,omitempty"`
-	TargetFormat        string            `json:"target_format,omitempty"`
-	TargetUse           string            `json:"target_use,omitempty"`
-	OwnerKind           string            `json:"owner_kind,omitempty"`
-	OwnerNodeID         string            `json:"owner_node_id,omitempty"`
-	OwnerProcessID      int               `json:"owner_process_id,omitempty"`
-	OwnershipMode       string            `json:"ownership_mode,omitempty"`
-	DiscoveryBadges     []string          `json:"discovery_badges,omitempty"`
-	TargetMetadata      map[string]string `json:"target_metadata,omitempty"`
-	Metadata            map[string]string `json:"metadata,omitempty"`
+	TraceID             string               `json:"trace_id"`
+	RawName             string               `json:"raw_name,omitempty"`
+	DisplayName         string               `json:"display_name,omitempty"`
+	Description         string               `json:"description,omitempty"`
+	Help                string               `json:"help,omitempty"`
+	SafetyNote          string               `json:"safety_note,omitempty"`
+	SourceEvidence      []string             `json:"source_evidence,omitempty"`
+	Unit                string               `json:"unit,omitempty"`
+	ValueType           string               `json:"value_type,omitempty"`
+	ValueTable          map[string]string    `json:"value_table,omitempty"`
+	Encoding            *SignalValueEncoding `json:"encoding,omitempty"`
+	Access              string               `json:"access,omitempty"`
+	GraphSource         string               `json:"graph_source,omitempty"`
+	GraphType           string               `json:"graph_type,omitempty"`
+	Category            SignalCategory       `json:"category,omitempty"`
+	Kind                SignalKind           `json:"kind,omitempty"`
+	Role                SignalRole           `json:"role,omitempty"`
+	GroupKey            string               `json:"group_key,omitempty"`
+	GroupLabel          string               `json:"group_label,omitempty"`
+	InstanceKey         string               `json:"instance_key,omitempty"`
+	SortKey             string               `json:"sort_key,omitempty"`
+	CounterpartGroup    string               `json:"counterpart_group,omitempty"`
+	CounterpartTraceIDs []string             `json:"counterpart_trace_ids,omitempty"`
+	DefaultHint         GraphHint            `json:"default_hint,omitempty"`
+	StaticInfo          bool                 `json:"static_info,omitempty"`
+	SemanticStatus      string               `json:"semantic_status,omitempty"`
+	SourceSubject       string               `json:"source_subject,omitempty"`
+	HistoryPath         string               `json:"history_path,omitempty"`
+	TargetID            string               `json:"target_id,omitempty"`
+	TargetFormat        string               `json:"target_format,omitempty"`
+	TargetUse           string               `json:"target_use,omitempty"`
+	DefinitionRef       string               `json:"definition_ref,omitempty"`
+	OwnerKind           string               `json:"owner_kind,omitempty"`
+	OwnerNodeID         string               `json:"owner_node_id,omitempty"`
+	OwnerProcessID      int                  `json:"owner_process_id,omitempty"`
+	OwnershipMode       string               `json:"ownership_mode,omitempty"`
+	DiscoveryBadges     []string             `json:"discovery_badges,omitempty"`
+	TargetMetadata      map[string]string    `json:"target_metadata,omitempty"`
+	Metadata            map[string]string    `json:"metadata,omitempty"`
 }
 
 type DiscoveredCatalogueRecord struct {
@@ -179,6 +187,33 @@ func (c SourceCatalogue) Validate() error {
 		seen[traceID] = struct{}{}
 		if strings.TrimSpace(entry.Access) == "" && !entry.StaticInfo {
 			return fmt.Errorf("source catalogue entry %d access is required unless static_info is true", i)
+		}
+		if err := validateSignalValueEncoding(entry.Encoding); err != nil {
+			return fmt.Errorf("source catalogue entry %d encoding invalid: %w", i, err)
+		}
+	}
+	return nil
+}
+
+func validateSignalValueEncoding(encoding *SignalValueEncoding) error {
+	if encoding == nil {
+		return nil
+	}
+	if strings.TrimSpace(encoding.Kind) == "" {
+		return fmt.Errorf("kind is required")
+	}
+	if encoding.StartBit < 0 {
+		return fmt.Errorf("start_bit must be non-negative")
+	}
+	if encoding.BitLength < 0 {
+		return fmt.Errorf("bit_length must be non-negative")
+	}
+	for i, field := range encoding.BitFields {
+		if strings.TrimSpace(field.Name) == "" {
+			return fmt.Errorf("bit_fields[%d] name is required", i)
+		}
+		if field.Bit < 0 {
+			return fmt.Errorf("bit_fields[%d] bit must be non-negative", i)
 		}
 	}
 	return nil

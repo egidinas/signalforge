@@ -17,6 +17,10 @@ export type {
   RouteState, RouteCandidate, RouteRedundancyContract,
   JsonSignalCatalogue, JsonSignalCatalogueEntry,
   SourceCatalogue, SourceCatalogueCapabilities, SourceCatalogueEntry, SourceCatalogueTransportPath,
+  SignalDefinitionProfile, SignalValueEncoding, SignalBitField,
+  SignalDictionaryBundle, SignalDictionaryClassification, SignalRouteOperation,
+  SignalSemanticGroup, SignalRouteContract, SignalDBCMetadata, SignalDBCLayout,
+  SignalRingProfile, SignalDecimationProfile, SignalGraphWallTarget, SignalDomainMetadata,
   SemanticOverlayBundle, SemanticOverlayEntry, SemanticOverlayTarget, SemanticOverlayStoreOptions,
   // Signal catalogue
   SemanticSignal, Channel,
@@ -72,6 +76,8 @@ export { loadWalls, saveWalls, useWalls } from "./walls/useWalls";
 export type { WallsHandle } from "./walls/useWalls";
 export { useTileSeries } from "./tiles/useTileSeries";
 export type { TileState } from "./tiles/useTileSeries";
+export { useViewportRetainedGraphTile } from "./tiles/useViewportRetainedGraphTile";
+export type { ViewportRetainedGraphTileOptions } from "./tiles/useViewportRetainedGraphTile";
 
 // Tile client
 export { DEFAULT_TILE_LEVELS, TileClient, pickTileLevel } from "./tiles/TileClient";
@@ -105,10 +111,12 @@ export {
   measuredElementWidth,
   graphSeriesIdentityKey,
   emptyGraphTile,
+  hasRenderableGraphTile,
+  retainGraphTile,
   renderSeriesFromGraphTile,
   normalizeGraphTile,
 } from "./render/tileModel";
-export type { SeriesRoleMeta, RenderedTileSeries, MeasuredElementSize } from "./render/tileModel";
+export type { SeriesRoleMeta, RenderedTileSeries, MeasuredElementSize, RetainGraphTileOptions } from "./render/tileModel";
 export {
   clampRange,
   timeTicks,
@@ -127,6 +135,11 @@ export {
   paletteForID,
   colorForSignal,
   semanticColor,
+  DEFAULT_VISUAL_POLICY_CONFIG,
+  createVisualPolicyConfig,
+  configureVisualPolicy,
+  getVisualPolicyConfig,
+  resetVisualPolicy,
   signalPriority,
   orderLegendSignals,
   graphCardPriority,
@@ -138,6 +151,7 @@ export {
   eventColor,
   blockLabel,
 } from "./render/visualPolicy";
+export type { VisualPolicyConfig, VisualPolicyConfigInput, VisualPolicyRule } from "./render/visualPolicy";
 export {
   viewportSeries,
   commandCenterGapBreaks,
@@ -188,3 +202,5 @@ export { WallManager } from "./walls/WallManager";
 export type { WallManagerProps } from "./walls/WallManager";
 export { UPlotTileRenderer } from "./render/UPlotTileRenderer";
 export type { UPlotTileRendererProps } from "./render/UPlotTileRenderer";
+export { SwimlaneRenderer, swimlaneDefaultColorForValue, swimlaneDefaultTextForFill } from "./render/SwimlaneRenderer";
+export type { SwimlaneRendererProps, SwimlaneColorForValue, SwimlaneTextForFill } from "./render/SwimlaneRenderer";

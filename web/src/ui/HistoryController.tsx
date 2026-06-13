@@ -95,7 +95,7 @@ export function HistoryController({
             <input type="datetime-local" value={customT1} onChange={e => setCustomT1(e.target.value)} />
             <button className="sf-btn sm primary" onClick={handleApplyCustom}>Apply</button>
           </div>
-          {overallEarliest && (
+          {overallEarliest && overallLatest && (
             <div className="sf-availability-info">
               <span className="dim">Available from</span>
               <span className="sf-availability-pill">{overallEarliest.toLocaleString()}</span>

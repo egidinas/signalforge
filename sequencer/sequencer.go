@@ -27,33 +27,33 @@ type Script struct {
 }
 
 type Step struct {
-	ID             string         `json:"id"`
-	Kind           StepKind       `json:"kind"`
-	TargetID       string         `json:"target_id,omitempty"`
-	CommandName    string         `json:"command_name,omitempty"`
-	Arguments      map[string]any `json:"arguments,omitempty"`
-	AwaitAck       bool           `json:"await_ack,omitempty"`
-	Duration       time.Duration  `json:"duration,omitempty"`
-	IdempotencyKey string         `json:"idempotency_key,omitempty"`
+	ID             string            `json:"id"`
+	Kind           StepKind          `json:"kind"`
+	TargetID       string            `json:"target_id,omitempty"`
+	CommandName    string            `json:"command_name,omitempty"`
+	Arguments      map[string]any    `json:"arguments,omitempty"`
+	AwaitAck       bool              `json:"await_ack,omitempty"`
+	Duration       time.Duration     `json:"duration,omitempty"`
+	IdempotencyKey string            `json:"idempotency_key,omitempty"`
 	Metadata       map[string]string `json:"metadata,omitempty"`
 }
 
 type StepResult struct {
-	StepID     string        `json:"step_id"`
-	OK         bool          `json:"ok"`
-	Status     string        `json:"status,omitempty"`
-	Duration   time.Duration `json:"duration,omitempty"`
-	Error      string        `json:"error,omitempty"`
-	Note       string        `json:"note,omitempty"`
+	StepID   string        `json:"step_id"`
+	OK       bool          `json:"ok"`
+	Status   string        `json:"status,omitempty"`
+	Duration time.Duration `json:"duration,omitempty"`
+	Error    string        `json:"error,omitempty"`
+	Note     string        `json:"note,omitempty"`
 }
 
 type Result struct {
-	ScriptID string       `json:"script_id"`
-	RunID    string       `json:"run_id"`
-	OK       bool         `json:"ok"`
+	ScriptID string        `json:"script_id"`
+	RunID    string        `json:"run_id"`
+	OK       bool          `json:"ok"`
 	Duration time.Duration `json:"duration,omitempty"`
-	Steps    []StepResult `json:"steps"`
-	Error    string       `json:"error,omitempty"`
+	Steps    []StepResult  `json:"steps"`
+	Error    string        `json:"error,omitempty"`
 }
 
 // UnmarshalJSON lets Script.timeout accept either a Go duration string or a numeric nanosecond value.
@@ -146,18 +146,18 @@ func (r *Runner) Run(ctx context.Context, script Script) (Result, error) {
 			res.OK = false
 			break
 		}
-		
+
 		stepStart := time.Now()
 		sr := r.Handler.ExecuteStep(scriptCtx, step)
 		sr.Duration = time.Since(stepStart)
-		
+
 		res.Steps = append(res.Steps, sr)
 		if !sr.OK {
 			res.OK = false
 			break
 		}
 	}
-	
+
 	res.Duration = time.Since(start)
 	return res, nil
 }
@@ -239,4 +239,3 @@ func Run(ctx context.Context, script Script, commander contracts.Commander) (Res
 	}
 	return runner.Run(ctx, script)
 }
-

@@ -85,6 +85,23 @@ func TestQueueDoesNotEmitDuplicateKeyInOneChunk(t *testing.T) {
 	}
 }
 
+func TestQueueDuplicateFrontStillAdvancesNormalRotation(t *testing.T) {
+	a := testItem{"a"}
+	b := testItem{"b"}
+	q := New[testItem, float64]([]testItem{a, b}, testKey)
+	q.EnqueueFront(a)
+
+	chunk := q.NextChunk(3)
+	if len(chunk) != 2 || chunk[0].Key != "a" || chunk[1].Key != "b" {
+		t.Fatalf("chunk = %#v, want front a then normal b", chunk)
+	}
+
+	next := q.NextChunk(1)
+	if len(next) != 1 || next[0].Key != "a" {
+		t.Fatalf("next = %#v, want normal rotation to resume at a", next)
+	}
+}
+
 func TestQueueLatestIsSeededAndRecorded(t *testing.T) {
 	item := testItem{"temperature"}
 	q := New[testItem, float64]([]testItem{item}, testKey)

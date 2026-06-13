@@ -1,5 +1,11 @@
 // SignalForge shared type contracts — graph_tile.v1 + render layer types
 
+import type {
+  SignalProjectionBundle,
+  SignalProjectionSignalRef,
+  SignalProjectionSourceFamily,
+} from "../catalogue/projection";
+
 // ---- Render layer types ----
 
 export type GraphPoint = { timestamp: string; value: number };
@@ -36,7 +42,7 @@ export type HeroGraphModel = {
 export type GraphWallSignal = {
   id: string; label: string; unit?: string; source: string;
   source_family: string; kind: string; category: string;
-  role: string; subsystem: string; axis_id?: string; section_id: string;
+  role: string; subsystem: string; color?: string; axis_id?: string; section_id: string;
   value_table?: Record<string, string>;
 };
 
@@ -243,12 +249,54 @@ export type SourceCatalogueCapabilities = {
   transport_paths?: SourceCatalogueTransportPath[];
 };
 
+export type SignalDefinitionProfile = {
+  id: string;
+  display_name?: string;
+  system: string;
+  family: string;
+  sub_family?: string;
+  variant?: string;
+  version?: string;
+  source_families?: SignalProjectionSourceFamily[];
+  description?: string;
+  classification?: SignalDictionaryClassification;
+  metadata?: Record<string, unknown>;
+};
+
+export type SignalBitField = {
+  name: string;
+  label?: string;
+  bit?: number;
+  mask?: string;
+  value_table?: Record<string, string>;
+  metadata?: Record<string, unknown>;
+};
+
+export type SignalValueEncoding = {
+  kind: string;
+  data_type?: string;
+  byte_order?: string;
+  start_bit?: number;
+  bit_length?: number;
+  scale?: number;
+  offset?: number;
+  raw_unit?: string;
+  bit_fields?: SignalBitField[];
+  metadata?: Record<string, unknown>;
+};
+
 export type SourceCatalogueEntry = {
   trace_id: string;
   raw_name?: string;
   display_name?: string;
+  description?: string;
+  help?: string;
+  safety_note?: string;
+  source_evidence?: string[];
   unit?: string;
   value_type?: string;
+  value_table?: Record<string, string>;
+  encoding?: SignalValueEncoding;
   access?: string;
   graph_source?: string;
   graph_type?: string;
@@ -269,6 +317,7 @@ export type SourceCatalogueEntry = {
   target_id?: string;
   target_format?: string;
   target_use?: string;
+  definition_ref?: string;
   owner_kind?: string;
   owner_node_id?: string;
   owner_process_id?: number;
@@ -283,8 +332,152 @@ export type SourceCatalogue = {
   source_id: string;
   source_family: string;
   display_name?: string;
+  definition_ref?: string;
   entries: SourceCatalogueEntry[];
   capabilities?: SourceCatalogueCapabilities;
+};
+
+export type SignalDictionaryClassification = "public_synthetic" | "public_clean_room" | "private_lab" | "derived" | string;
+
+export type SignalRouteOperation = "observe" | "mux" | "route" | "mirror" | "tap" | "splice" | "replay" | string;
+
+export type SignalSemanticGroup = {
+  id: string;
+  label: string;
+  parent_id?: string;
+  source_families?: SignalProjectionSourceFamily[];
+  source_ids?: string[];
+  signal_refs?: SignalProjectionSignalRef[];
+  sort_key?: string;
+  default_open?: boolean;
+  metadata?: Record<string, unknown>;
+};
+
+export type SignalDBCLayout = {
+  start_bit: number;
+  bit_length: number;
+  byte_order: string;
+  signed?: boolean;
+  factor?: number;
+  offset?: number;
+  minimum?: number;
+  maximum?: number;
+  raw_unit?: string;
+};
+
+export type SignalDBCMetadata = {
+  bus_id: string;
+  message_name: string;
+  frame_id: string;
+  extended_id?: boolean;
+  can_fd?: boolean;
+  dlc?: number;
+  cycle_time_ms?: number;
+  send_type?: string;
+  mux_switch?: string;
+  mux_case?: string;
+  mux_value?: string;
+  signal_name?: string;
+  value_table?: Record<string, string>;
+  layout?: SignalDBCLayout;
+  metadata?: Record<string, unknown>;
+};
+
+export type SignalRouteContract = {
+  route_id: string;
+  operation: SignalRouteOperation;
+  label?: string;
+  source_endpoint_id?: string;
+  sink_endpoint_id?: string;
+  transport_kind?: string;
+  access_mode: string;
+  authority_mode?: string;
+  lease_required?: boolean;
+  operator_ack_required?: boolean;
+  rollback_available?: boolean;
+  freshness_ms?: number;
+  input_refs?: SignalProjectionSignalRef[];
+  output_refs?: SignalProjectionSignalRef[];
+  dbc?: SignalDBCMetadata;
+  ring_id?: string;
+  decimation_id?: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type SignalRingProfile = {
+  id: string;
+  label?: string;
+  source_id?: string;
+  signal_refs?: SignalProjectionSignalRef[];
+  capacity_samples?: number;
+  capacity_bytes?: number;
+  retention_policy: string;
+  sequence_field?: string;
+  watermark_field?: string;
+  dropped_field?: string;
+  truncated_field?: string;
+  freshness_ms?: number;
+  metadata?: Record<string, unknown>;
+};
+
+export type SignalDecimationProfile = {
+  id: string;
+  label?: string;
+  algorithm: string;
+  applies_to_kinds?: string[];
+  max_points?: number;
+  bucket_ms?: number;
+  min_max_envelope?: boolean;
+  event_preserving?: boolean;
+  state_span_preserving?: boolean;
+  reducer_provenance?: string;
+  metadata?: Record<string, unknown>;
+};
+
+export type SignalGraphWallTarget = {
+  target_id: string;
+  label?: string;
+  lane: string;
+  role: string;
+  tile_level?: string;
+  source_id?: string;
+  source_family?: SignalProjectionSourceFamily;
+  trace_id?: string;
+  projection_id?: string;
+  route_id?: string;
+  ring_id?: string;
+  decimation_id?: string;
+  signal_refs?: SignalProjectionSignalRef[];
+  metadata?: Record<string, unknown>;
+};
+
+export type SignalDomainMetadata = {
+  domain?: SignalProjectionSourceFamily;
+  source_id?: string;
+  definition_ref?: string;
+  system?: string;
+  family?: string;
+  sub_family?: string;
+  required?: string[];
+  recommended?: string[];
+  metadata?: Record<string, unknown>;
+};
+
+export type SignalDictionaryBundle = {
+  schema_version: number;
+  fixture_id: string;
+  classification: SignalDictionaryClassification;
+  generated_at?: string;
+  definition_profiles?: SignalDefinitionProfile[];
+  catalogues?: SourceCatalogue[];
+  projections?: SignalProjectionBundle[];
+  semantic_groups?: SignalSemanticGroup[];
+  routes?: SignalRouteContract[];
+  rings?: SignalRingProfile[];
+  decimations?: SignalDecimationProfile[];
+  graph_wall_targets?: SignalGraphWallTarget[];
+  domain_metadata?: SignalDomainMetadata[];
+  metadata?: Record<string, unknown>;
 };
 
 // User semantic overlays keep operator labels, notes, and local projections

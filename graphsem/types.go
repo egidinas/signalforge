@@ -16,11 +16,11 @@ type SourceFamily string
 
 const (
 	SourceFamilyCanDbc           SourceFamily = "can_dbc"
-	SourceFamilyTec              SourceFamily = "tec"
-	SourceFamilyMeComTec         SourceFamily = "mecom_tec"
+	SourceFamilyHuberUnistat     SourceFamily = "huber_unistat"
 	SourceFamilyThermalChamber   SourceFamily = "thermal_chamber"
 	SourceFamilyOPCUA            SourceFamily = "opcua"
 	SourceFamilyNISharedVariable SourceFamily = "ni_shared_variable"
+	SourceFamilyLabInstruments   SourceFamily = "lab_instruments"
 	SourceFamilyOtherDiscovered  SourceFamily = "other_discovered"
 	SourceFamilyBeckhoffTrace    SourceFamily = "beckhoff_trace"
 	SourceFamilyVacuumPressure   SourceFamily = "vacuum_pressure"

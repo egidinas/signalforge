@@ -32,14 +32,15 @@ type Result[T any, V any] struct {
 // one-shot manual request ahead of normal rotation while preserving normal
 // scheduler fairness.
 type Queue[T any, V any] struct {
-	mu        sync.Mutex
-	key       KeyFunc[T]
-	normal    []T
-	front     []T
-	normalSet map[string]struct{}
-	frontSet  map[string]struct{}
-	latest    map[string]Result[T, V]
-	manualRun int
+	mu         sync.Mutex
+	key        KeyFunc[T]
+	normal     []T
+	normalHead int
+	front      []T
+	normalSet  map[string]struct{}
+	frontSet   map[string]struct{}
+	latest     map[string]Result[T, V]
+	manualRun  int
 }
 
 // New creates a queue and seeds Latest for all initial items.
@@ -175,8 +176,11 @@ func (q *Queue[T, V]) emitFrontLocked(out *[]T, emitted map[string]struct{}) boo
 }
 
 func (q *Queue[T, V]) emitNormalLocked(out *[]T, emitted map[string]struct{}) bool {
-	item := q.normal[0]
-	q.normal = append(q.normal[1:], item)
+	item := q.normal[q.normalHead]
+	q.normalHead++
+	if q.normalHead == len(q.normal) {
+		q.normalHead = 0
+	}
 	key := q.itemKey(item)
 	if _, ok := emitted[key]; ok {
 		return false

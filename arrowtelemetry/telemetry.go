@@ -169,6 +169,7 @@ func WriteCampaign(path, campaignID string, samples <-chan contracts.TelemetrySa
 
 	var parquetRows []ParquetRow
 	rowCount := 0
+	knownFloatIDs, knownStateIDs := orderedTelemetryIDs(meta)
 
 	flush := func() error {
 		if rowCount == 0 {
@@ -200,8 +201,7 @@ func WriteCampaign(path, campaignID string, samples <-chan contracts.TelemetrySa
 		}
 		timestampNS := parsed.UnixNano()
 
-		signalIDs := sortedFloatKeys(sample.Signals)
-		for _, signalID := range signalIDs {
+		for _, signalID := range orderedFloatSampleIDs(sample.Signals, knownFloatIDs) {
 			item := meta[signalID]
 			v := roundTelemetryValue(signalID, item.Unit, sample.Signals[signalID])
 
@@ -225,8 +225,7 @@ func WriteCampaign(path, campaignID string, samples <-chan contracts.TelemetrySa
 			rowCount++
 		}
 
-		stateIDs := sortedStringKeys(sample.States)
-		for _, signalID := range stateIDs {
+		for _, signalID := range orderedStringSampleIDs(sample.States, knownStateIDs) {
 			item := meta[signalID]
 			ts.Append(timestampNS)
 			_ = appendDict(sensor, signalID)
@@ -402,18 +401,69 @@ func ptrString(value string) *string {
 	return &value
 }
 
-func sortedFloatKeys(values map[string]float64) []string {
-	keys := make([]string, 0, len(values))
+func orderedTelemetryIDs(meta map[string]SignalMeta) ([]string, []string) {
+	floatIDs := make([]string, 0, len(meta))
+	stateIDs := make([]string, 0, len(meta))
+	for id, item := range meta {
+		if isStateSignal(item) {
+			stateIDs = append(stateIDs, id)
+			continue
+		}
+		floatIDs = append(floatIDs, id)
+	}
+	sort.Strings(floatIDs)
+	sort.Strings(stateIDs)
+	return floatIDs, stateIDs
+}
+
+func isStateSignal(item SignalMeta) bool {
+	return item.SignalKind == "state" || strings.EqualFold(item.Unit, "state")
+}
+
+func orderedFloatSampleIDs(values map[string]float64, knownIDs []string) []string {
+	ids := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, id := range knownIDs {
+		if _, ok := values[id]; !ok {
+			continue
+		}
+		ids = append(ids, id)
+		seen[id] = struct{}{}
+	}
+	return append(ids, sortedUnknownFloatKeys(values, seen)...)
+}
+
+func orderedStringSampleIDs(values map[string]string, knownIDs []string) []string {
+	ids := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, id := range knownIDs {
+		if _, ok := values[id]; !ok {
+			continue
+		}
+		ids = append(ids, id)
+		seen[id] = struct{}{}
+	}
+	return append(ids, sortedUnknownStringKeys(values, seen)...)
+}
+
+func sortedUnknownFloatKeys(values map[string]float64, seen map[string]struct{}) []string {
+	keys := make([]string, 0)
 	for key := range values {
+		if _, ok := seen[key]; ok {
+			continue
+		}
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)
 	return keys
 }
 
-func sortedStringKeys(values map[string]string) []string {
-	keys := make([]string, 0, len(values))
+func sortedUnknownStringKeys(values map[string]string, seen map[string]struct{}) []string {
+	keys := make([]string, 0)
 	for key := range values {
+		if _, ok := seen[key]; ok {
+			continue
+		}
 		keys = append(keys, key)
 	}
 	sort.Strings(keys)

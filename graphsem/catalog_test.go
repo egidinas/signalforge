@@ -11,7 +11,7 @@ func TestMemorySignalCatalogFiltersSignals(t *testing.T) {
 		SignalID:      "fixture.temperature.01",
 		CanonicalName: "fixture.temperature.channel_01",
 		Category:      CategoryThermal,
-		SourceFamily:  SourceFamilyMeComTec,
+		SourceFamily:  fixtureCatalogueFamily,
 		DUTID:         "fixture_dut_01",
 	})
 	catalogue.Register(SemanticSignal{

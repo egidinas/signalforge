@@ -20,10 +20,10 @@
   included.
 - Fixtures/examples included: Unit tests use synthetic targets such as
   `tec-76` only as stable public-safe examples.
-- Fixtures/examples rejected: No private Loom overlay or deployment files were
+- Fixtures/examples rejected: No private overlay or deployment files were
   imported.
-- Renames performed: The API is intentionally generic and not Meerstetter-,
-  Loom-, or Gossamer-specific.
+- Renames performed: The API is intentionally generic and not product- or
+  deployment-specific.
 - Compatibility aliases needed: None.
 
 ## Public Build

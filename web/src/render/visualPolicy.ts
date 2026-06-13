@@ -1,6 +1,23 @@
 import type { GraphTileCardRef, GraphWallCard, GraphWallModel, TileSeries } from "../types";
 
-export const roleColors: Record<string, string> = {
+export interface VisualPolicyRule {
+  readonly any?: readonly string[];
+  readonly all?: readonly string[];
+  readonly color: string;
+}
+
+export interface VisualPolicyConfig {
+  readonly roleColors: Record<string, string>;
+  readonly signalColors: Record<string, string>;
+  readonly palette: readonly string[];
+  readonly semanticColorRules: readonly VisualPolicyRule[];
+  readonly eventColorRules: readonly VisualPolicyRule[];
+  readonly defaultEventColor: string;
+}
+
+export type VisualPolicyConfigInput = Partial<VisualPolicyConfig>;
+
+const DEFAULT_ROLE_COLORS: Record<string, string> = {
   command: "#ffd85f",
   ghost: "#8aa7c4",
   acceptance_band: "#3ddc84",
@@ -15,7 +32,7 @@ export const roleColors: Record<string, string> = {
   state: "#8bd3a5",
 };
 
-export const signalColors: Record<string, string> = {
+const DEFAULT_SIGNAL_COLORS: Record<string, string> = {
   "trace.command.chamber": "#ffd400",
   "trace.ghost.profile": "#f8fafc",
   "trace.acceptance.temperature": "#4ee28a",
@@ -73,7 +90,7 @@ export const signalColors: Record<string, string> = {
   "trace.tvac_exhaust_cold_recovery": "#b079ff",
 };
 
-export const distinctivePalette = [
+const DEFAULT_DISTINCTIVE_PALETTE = [
   "#31d6ff",
   "#ffb000",
   "#ff5c93",
@@ -92,6 +109,101 @@ export const distinctivePalette = [
   "#ef476f",
 ];
 
+const DEFAULT_SEMANTIC_COLOR_RULES: VisualPolicyRule[] = [
+  { any: ["dut_temp_a", "dut.a", "node_a"], color: "#ff315f" },
+  { any: ["dut_temp_b", "dut.b", "node_b"], color: "#00d6a3" },
+  { all: ["dut", "temp"], color: "#ff6b35" },
+  { any: ["command", "target"], color: "#ffd400" },
+  { any: ["ghost", "profile"], color: "#f8fafc" },
+  { any: ["pressure"], color: "#1f6fff" },
+  { any: ["power"], color: "#ff7a35" },
+  { any: ["packet", "bus"], color: "#b079ff" },
+  { any: ["ready", "operative", "stability"], color: "#00d6a3" },
+  { any: ["fault", "error", "interlock"], color: "#ff315f" },
+  { any: ["interface", "table", "platen"], color: "#ff8a00" },
+  { any: ["shroud"], color: "#b65cff" },
+  { any: ["chamber"], color: "#00c8ff" },
+];
+
+const DEFAULT_EVENT_COLOR_RULES: VisualPolicyRule[] = [
+  { any: ["functional", "gate"], color: "#ffb000" },
+  { any: ["evidence"], color: "#b079ff" },
+  { any: ["interlock", "fault"], color: "#ff315f" },
+  { any: ["stability", "dwell"], color: "#00d6a3" },
+  { any: ["pressure"], color: "#1f6fff" },
+];
+
+export const DEFAULT_VISUAL_POLICY_CONFIG: VisualPolicyConfig = {
+  roleColors: DEFAULT_ROLE_COLORS,
+  signalColors: DEFAULT_SIGNAL_COLORS,
+  palette: DEFAULT_DISTINCTIVE_PALETTE,
+  semanticColorRules: DEFAULT_SEMANTIC_COLOR_RULES,
+  eventColorRules: DEFAULT_EVENT_COLOR_RULES,
+  defaultEventColor: "#31d6ff",
+};
+
+export const roleColors: Record<string, string> = { ...DEFAULT_ROLE_COLORS };
+export const signalColors: Record<string, string> = { ...DEFAULT_SIGNAL_COLORS };
+export const distinctivePalette = [...DEFAULT_DISTINCTIVE_PALETTE];
+
+let semanticColorRules = [...DEFAULT_SEMANTIC_COLOR_RULES];
+let eventColorRules = [...DEFAULT_EVENT_COLOR_RULES];
+let defaultEventColor = DEFAULT_VISUAL_POLICY_CONFIG.defaultEventColor;
+
+function replaceRecord(target: Record<string, string>, next: Record<string, string>) {
+  Object.keys(target).forEach((key) => delete target[key]);
+  Object.assign(target, next);
+}
+
+function replaceArray<T>(target: T[], next: readonly T[]) {
+  target.splice(0, target.length, ...next);
+}
+
+function cloneRules(rules: readonly VisualPolicyRule[]) {
+  return rules.map((rule) => ({
+    ...rule,
+    any: rule.any ? [...rule.any] : undefined,
+    all: rule.all ? [...rule.all] : undefined,
+  }));
+}
+
+export function createVisualPolicyConfig(input: VisualPolicyConfigInput = {}): VisualPolicyConfig {
+  return {
+    roleColors: { ...DEFAULT_ROLE_COLORS, ...(input.roleColors ?? {}) },
+    signalColors: { ...DEFAULT_SIGNAL_COLORS, ...(input.signalColors ?? {}) },
+    palette: input.palette && input.palette.length > 0 ? [...input.palette] : [...DEFAULT_DISTINCTIVE_PALETTE],
+    semanticColorRules: input.semanticColorRules ? cloneRules(input.semanticColorRules) : cloneRules(DEFAULT_SEMANTIC_COLOR_RULES),
+    eventColorRules: input.eventColorRules ? cloneRules(input.eventColorRules) : cloneRules(DEFAULT_EVENT_COLOR_RULES),
+    defaultEventColor: input.defaultEventColor ?? DEFAULT_VISUAL_POLICY_CONFIG.defaultEventColor,
+  };
+}
+
+export function configureVisualPolicy(input: VisualPolicyConfigInput = {}) {
+  const next = createVisualPolicyConfig(input);
+  replaceRecord(roleColors, next.roleColors);
+  replaceRecord(signalColors, next.signalColors);
+  replaceArray(distinctivePalette, next.palette);
+  semanticColorRules = cloneRules(next.semanticColorRules);
+  eventColorRules = cloneRules(next.eventColorRules);
+  defaultEventColor = next.defaultEventColor;
+  return getVisualPolicyConfig();
+}
+
+export function resetVisualPolicy() {
+  return configureVisualPolicy();
+}
+
+export function getVisualPolicyConfig(): VisualPolicyConfig {
+  return {
+    roleColors: { ...roleColors },
+    signalColors: { ...signalColors },
+    palette: [...distinctivePalette],
+    semanticColorRules: cloneRules(semanticColorRules),
+    eventColorRules: cloneRules(eventColorRules),
+    defaultEventColor,
+  };
+}
+
 export function palette(index: number) {
   return distinctivePalette[index % distinctivePalette.length];
 }
@@ -104,7 +216,8 @@ export function paletteForID(id: string, fallbackIndex: number) {
 
 export function colorForSignal(signal: Pick<TileSeries, "id" | "role" | "render_kind" | "kind" | "color"> | { id: string; role: string; kind?: string; color?: string }, index = 0) {
   const kind = "kind" in signal ? signal.kind : ("render_kind" in signal ? signal.render_kind : undefined);
-  if (signal.color && !signal.color.includes("var(")) return signal.color;
+  const configuredColor = "color" in signal ? signal.color : undefined;
+  if (typeof configuredColor === "string" && configuredColor.trim()) return configuredColor.trim();
   if (signalColors[signal.id]) return signalColors[signal.id];
   const semantic = semanticColor(signal.id);
   if (semantic) return semantic;
@@ -115,22 +228,20 @@ export function colorForSignal(signal: Pick<TileSeries, "id" | "role" | "render_
   return paletteForID(signal.id, index) ?? palette(index);
 }
 
+function ruleMatches(lower: string, rule: VisualPolicyRule) {
+  const all = rule.all ?? [];
+  const any = rule.any ?? [];
+  return all.every((term) => lower.includes(term.toLowerCase()))
+    && (any.length === 0 || any.some((term) => lower.includes(term.toLowerCase())));
+}
+
+function colorForRuleText(text: string, rules: readonly VisualPolicyRule[]) {
+  const lower = text.toLowerCase();
+  return rules.find((rule) => ruleMatches(lower, rule))?.color;
+}
+
 export function semanticColor(id: string) {
-  const lower = id.toLowerCase();
-  if (lower.includes("dut_temp_a") || lower.includes("dut.a") || lower.includes("node_a")) return "#ff315f";
-  if (lower.includes("dut_temp_b") || lower.includes("dut.b") || lower.includes("node_b")) return "#00d6a3";
-  if (lower.includes("dut") && lower.includes("temp")) return "#ff6b35";
-  if (lower.includes("command") || lower.includes("target")) return "#ffd400";
-  if (lower.includes("ghost") || lower.includes("profile")) return "#f8fafc";
-  if (lower.includes("pressure")) return "#1f6fff";
-  if (lower.includes("power")) return "#ff7a35";
-  if (lower.includes("packet") || lower.includes("bus")) return "#b079ff";
-  if (lower.includes("ready") || lower.includes("operative") || lower.includes("stability")) return "#00d6a3";
-  if (lower.includes("fault") || lower.includes("error") || lower.includes("interlock")) return "#ff315f";
-  if (lower.includes("interface") || lower.includes("table") || lower.includes("platen")) return "#ff8a00";
-  if (lower.includes("shroud")) return "#b65cff";
-  if (lower.includes("chamber")) return "#00c8ff";
-  return undefined;
+  return colorForRuleText(id, semanticColorRules);
 }
 
 export function signalPriority(signal: { id: string; label?: string; role?: string; kind?: string; render_kind?: string }) {
@@ -207,13 +318,7 @@ export function tileCardPriority(a: GraphTileCardRef, b: GraphTileCardRef) {
 }
 
 export function eventColor(kind?: string) {
-  const lower = (kind ?? "").toLowerCase();
-  if (lower.includes("functional") || lower.includes("gate")) return "#ffb000";
-  if (lower.includes("evidence")) return "#b079ff";
-  if (lower.includes("interlock") || lower.includes("fault")) return "#ff315f";
-  if (lower.includes("stability") || lower.includes("dwell")) return "#00d6a3";
-  if (lower.includes("pressure")) return "#1f6fff";
-  return "#31d6ff";
+  return colorForRuleText(kind ?? "", eventColorRules) ?? defaultEventColor;
 }
 
 export function blockLabel(label: string, value: number) {

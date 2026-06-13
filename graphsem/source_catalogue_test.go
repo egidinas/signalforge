@@ -2,19 +2,25 @@ package graphsem
 
 import "testing"
 
+const fixtureCatalogueFamily SourceFamily = "fixture_device"
+
 func TestSourceCatalogueValidateAndResolveSelection(t *testing.T) {
 	catalogue := SourceCatalogue{
 		SchemaVersion: CurrentSourceCatalogueSchemaVersion,
 		SourceID:      "fixture_source",
-		SourceFamily:  SourceFamilyMeComTec,
+		SourceFamily:  fixtureCatalogueFamily,
 		DisplayName:   "Fixture source",
+		DefinitionRef: "fixture.device.v1",
 		Entries: []SourceCatalogueRow{
 			{
 				TraceID:             "fixture.channel_01.temperature_c",
 				RawName:             "TEMP_CH1",
 				DisplayName:         "Channel 01 temperature",
+				Help:                "Fixture value used by catalogue tests",
+				SourceEvidence:      []string{"synthetic fixture"},
 				Unit:                "degC",
 				ValueType:           "float",
+				Encoding:            &SignalValueEncoding{Kind: "scalar", DataType: "float32", Scale: 0.1, RawUnit: "degC"},
 				Access:              "subscribe",
 				GraphType:           "line",
 				Category:            CategoryThermal,
@@ -34,6 +40,8 @@ func TestSourceCatalogueValidateAndResolveSelection(t *testing.T) {
 				RawName:     "STATE_CH1",
 				DisplayName: "Channel 01 state",
 				ValueType:   "string",
+				ValueTable:  map[string]string{"0": "standby", "1": "active"},
+				Encoding:    &SignalValueEncoding{Kind: "enum", DataType: "uint8"},
 				Access:      "subscribe",
 				GraphType:   "step",
 				Category:    CategoryStatus,
@@ -59,7 +67,7 @@ func TestSourceCatalogueValidateAndResolveSelection(t *testing.T) {
 	selection := SourceSignalSelection{
 		SchemaVersion: CurrentSourceCatalogueSchemaVersion,
 		SourceID:      "fixture_source",
-		SourceFamily:  SourceFamilyMeComTec,
+		SourceFamily:  fixtureCatalogueFamily,
 		Signals: []SelectedSignal{
 			{
 				SignalID:      "fixture.temp.01",
@@ -80,7 +88,7 @@ func TestSourceCatalogueValidateAndResolveSelection(t *testing.T) {
 	if signal.CanonicalName != "fixture.temperature.channel_01" {
 		t.Fatalf("CanonicalName = %q", signal.CanonicalName)
 	}
-	if signal.SourceFamily != SourceFamilyMeComTec || signal.Category != CategoryThermal || signal.DefaultHint != HintLine {
+	if signal.SourceFamily != fixtureCatalogueFamily || signal.Category != CategoryThermal || signal.DefaultHint != HintLine {
 		t.Fatalf("semantic fields = %#v", signal)
 	}
 	if signal.GroupKey != "fixture/channel:1" || signal.GroupLabel != "Fixture channel 1" || signal.InstanceKey != "channel:1" {
@@ -95,7 +103,7 @@ func TestSourceCatalogueRejectsDuplicateSelectedTraceID(t *testing.T) {
 	catalogue := SourceCatalogue{
 		SchemaVersion: CurrentSourceCatalogueSchemaVersion,
 		SourceID:      "fixture_source",
-		SourceFamily:  SourceFamilyMeComTec,
+		SourceFamily:  fixtureCatalogueFamily,
 		Entries: []SourceCatalogueRow{
 			{
 				TraceID:     "fixture.channel_01.temperature_c",
@@ -123,6 +131,21 @@ func TestSourceCatalogueRejectsDuplicateSelectedTraceID(t *testing.T) {
 
 	if err := selection.ValidateAgainst(catalogue); err == nil {
 		t.Fatalf("expected duplicate trace_id selection to be rejected")
+	}
+}
+
+func TestSourceCatalogueRejectsInvalidEncoding(t *testing.T) {
+	catalogue := SourceCatalogue{
+		SchemaVersion: CurrentSourceCatalogueSchemaVersion,
+		SourceID:      "fixture_source",
+		SourceFamily:  fixtureCatalogueFamily,
+		Entries: []SourceCatalogueRow{
+			{TraceID: "fixture.channel_01.flags", Access: "subscribe", Encoding: &SignalValueEncoding{BitLength: 8}},
+		},
+	}
+
+	if err := catalogue.Validate(); err == nil {
+		t.Fatalf("expected invalid encoding to be rejected")
 	}
 }
 
